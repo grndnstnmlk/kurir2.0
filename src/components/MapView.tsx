@@ -28,9 +28,9 @@ export const MapView: React.FC<MapViewProps> = ({
         zoomControl: false,
       });
 
-      // CartoDB Voyager or Light Tiles
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
+      // OpenStreetMap Official Free Tile Server (Tanpa perlu API key apapun)
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map);
 
@@ -43,6 +43,11 @@ export const MapView: React.FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     const markersLayer = markersLayerRef.current;
     if (!map || !markersLayer) return;
+
+    // Refresh ukuran peta agar tile termuat sempurna seketika
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
 
     markersLayer.clearLayers();
 
