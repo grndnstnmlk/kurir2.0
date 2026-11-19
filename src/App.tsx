@@ -22,10 +22,17 @@ export function App() {
   const [isScanOpen, setIsScanOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Settings: Otomatis sinkronkan ke Branta Pamekasan jika masih menggunakan data demo lama
   const [settings, setSettings] = useState<CourierSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.dropPointName && !parsed.dropPointName.includes('Menteng')) {
+          return parsed;
+        }
+      }
+      return DEFAULT_SETTINGS;
     } catch {
       return DEFAULT_SETTINGS;
     }
@@ -33,12 +40,19 @@ export function App() {
 
   const [strategy, setStrategy] = useState<RouteStrategy>(settings.defaultStrategy || 'farthest-first');
 
+  // Paket: Otomatis sinkronkan ke sampel Branta Pamekasan jika masih demo lama
   const [packages, setPackages] = useState<DeliveryPackage[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PACKAGES);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Jika masih sampel Menteng lama, perbarui ke Branta
+          if (parsed[0]?.fullAddress?.includes('Menteng')) {
+            return INITIAL_SAMPLE_PACKAGES;
+          }
+          return parsed;
+        }
       }
       return INITIAL_SAMPLE_PACKAGES;
     } catch {
@@ -224,8 +238,12 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-[#222222] flex flex-col font-aspekta selection:bg-[#292929] selection:text-[#fafafa] bg-grid-faint">
-      {/* Qatchup Monochromatic Header */}
+    <div className={`min-h-screen flex flex-col font-aspekta transition-colors duration-300 ${
+      activeTab === 'deck'
+        ? 'bg-[#000000] text-white selection:bg-white selection:text-black'
+        : 'bg-[#fafafa] text-[#222222] selection:bg-[#292929] selection:text-[#fafafa] bg-grid-faint'
+    }`}>
+      {/* Three-Zone Navigation Bar */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -256,7 +274,7 @@ export function App() {
       )}
 
       {/* Main Tab Views */}
-      <main className="flex-1 pb-16">
+      <main className={`flex-1 ${activeTab === 'deck' ? 'pb-2' : 'pb-16'}`}>
         {activeTab === 'deck' && (
           <IPhoneCardDeckView
             packages={packages}
@@ -294,7 +312,7 @@ export function App() {
                   tambah paket baru,
                 </p>
                 <h3 className="font-normal text-xl text-[#080808] tracking-[-0.025em]">
-                  Scan Kamera atau Ketik Resi
+                  Area Branta - Tlanakan Pamekasan
                 </h3>
                 <p className="text-xs text-[#696969] mt-1 max-w-xs mx-auto">
                   Ambil foto resi paket J&T menggunakan kamera untuk otomatis membaca alamat & susun rute
@@ -314,7 +332,7 @@ export function App() {
                   onClick={handleLoadSampleData}
                   className="w-full py-3 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs rounded-full border border-[#e4e4e7] transition cursor-pointer"
                 >
-                  Muat Ulang 6 Paket Contoh
+                  Muat Sampel Paket Branta Pamekasan
                 </button>
               </div>
             </div>

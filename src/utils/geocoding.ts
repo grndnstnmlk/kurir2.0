@@ -1,14 +1,14 @@
 /**
- * Modul Geocoding cerdas untuk alamat Indonesia menggunakan OpenStreetMap Nominatim
- * Dilengkapi cache dan fallback lokal jika offline / alamat perumahan spesifik.
+ * Modul Geocoding cerdas untuk alamat Indonesia & wilayah Branta, Pamekasan, Madura
+ * Dilengkapi cache dan fallback lokal jika offline / alamat dusun & gang pesisir.
  */
 
 const geocodeCache: Record<string, { lat: number; lng: number }> = {};
 
 export async function geocodeAddress(
   address: string,
-  fallbackBaseLat: number = -6.2088,
-  fallbackBaseLng: number = 106.8456
+  fallbackBaseLat: number = -7.2187, // Branta Tinggi & Pesisir, Pamekasan
+  fallbackBaseLng: number = 113.4490
 ): Promise<{ lat: number; lng: number }> {
   const cleanAddr = address.trim();
   if (!cleanAddr) {
@@ -22,15 +22,20 @@ export async function geocodeAddress(
 
   // 2. Coba Nominatim OpenStreetMap
   try {
-    // Siapkan query yang ramah pencarian (hilangkan patokan/kode pos aneh jika terlalu panjang)
     const searchQuery = cleanAddr
       .replace(/RT\s*\d+\s*\/?\s*RW\s*\d+/gi, '')
       .replace(/No\.\s*\d+/gi, '')
-      .replace(/Blok\s*[A-Z0-9-]+/gi, '')
+      .replace(/Dusun\s+/gi, '')
       .trim();
 
+    // Tambahkan konteks Pamekasan jika belum ada di teks
+    let queryWithContext = searchQuery || cleanAddr;
+    if (!/pamekasan|tlanakan|madura/i.test(queryWithContext)) {
+      queryWithContext += ', Pamekasan';
+    }
+
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      searchQuery || cleanAddr
+      queryWithContext
     )}&countrycodes=id&limit=1`;
 
     const controller = new AbortController();
@@ -38,7 +43,7 @@ export async function geocodeAddress(
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Kurir2.0-Assistant-App/1.0',
+        'User-Agent': 'Kurir2.0-Madura/1.0',
       },
       signal: controller.signal,
     });
@@ -59,16 +64,16 @@ export async function geocodeAddress(
     // Jika timeout/offline, gunakan fallback cerdas
   }
 
-  // 3. Fallback Cerdas Berdasarkan Hash Teks Alamat (Menghasilkan koordinat realistis di sekitar area Drop Point)
+  // 3. Fallback Cerdas Berdasarkan Hash Teks Alamat di sekitar Branta Pamekasan
   let hash = 0;
   for (let i = 0; i < cleanAddr.length; i++) {
     hash = (hash << 5) - hash + cleanAddr.charCodeAt(i);
     hash |= 0;
   }
 
-  // Distribusikan dalam radius ~1-3 km dari Drop Point
-  const latOffset = ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.035;
-  const lngOffset = ((Math.abs(hash >> 3) % 1000) / 1000 - 0.5) * 0.035;
+  // Distribusikan dalam radius ~1-2 km dari area Branta / Tlanakan
+  const latOffset = ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.025;
+  const lngOffset = ((Math.abs(hash >> 3) % 1000) / 1000 - 0.5) * 0.025;
 
   const fallbackCoord = {
     lat: fallbackBaseLat + latOffset,
