@@ -2,63 +2,96 @@
 @import "leaflet/dist/leaflet.css";
 
 @theme {
-  --color-lipstick-magenta: #db3c8a;
-  --color-forest-ink: #00522d;
-  --color-blush-cream: #fce5df;
-  --color-warm-chalk: #fff8f6;
-  --color-charcoal-black: #000000;
-  --color-lilac-mist: #d1cfe4;
-  --color-bubblegum: #f29ebd;
-  --color-cotton-pink: #e878b2;
+  --color-charcoal: #080808;
+  --color-graphite: #222222;
+  --color-mid-ink: #292929;
+  --color-steel: #696969;
+  --color-fog: #999999;
+  --color-ash: #b2b2b2;
+  --color-slate: #8d8d8d;
+  --color-mist: #cccccc;
+  --color-silk: #e4e4e7;
+  --color-bone: #fafafa;
+  --color-cream: #f4f4f5;
 
-  --font-beni: 'Antonio', -apple-system, sans-serif;
-  --font-clash: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-aspekta: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-fasthand: 'Fasthand', cursive, sans-serif;
+
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 32px;
+  --radius-full: 999px;
 }
 
 :root {
-  --color-lipstick-magenta: #db3c8a;
-  --color-forest-ink: #00522d;
-  --color-blush-cream: #fce5df;
-  --color-warm-chalk: #fff8f6;
-  --color-charcoal-black: #000000;
-  --color-lilac-mist: #d1cfe4;
-  --color-bubblegum: #f29ebd;
-  --color-cotton-pink: #e878b2;
+  --color-charcoal: #080808;
+  --color-graphite: #222222;
+  --color-mid-ink: #292929;
+  --color-steel: #696969;
+  --color-fog: #999999;
+  --color-ash: #b2b2b2;
+  --color-slate: #8d8d8d;
+  --color-mist: #cccccc;
+  --color-silk: #e4e4e7;
+  --color-bone: #fafafa;
+  --color-cream: #f4f4f5;
 }
 
 html, body, #root {
   min-height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #fff8f6;
-  color: #00522d;
-  font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+  background-color: #fafafa;
+  color: #222222;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
-.font-beni {
-  font-family: 'Antonio', -apple-system, 'Impact', sans-serif;
-  line-height: 0.72;
+.font-aspekta {
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
-.font-clash {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+.font-fasthand {
+  font-family: 'Fasthand', cursive, sans-serif;
 }
 
-/* Leaflet marker customization in Agence Foudre palette */
+/* Qatchup Signature Layered Shadows */
+.shadow-subtle {
+  box-shadow: rgba(19, 19, 22, 0.05) 0px 0px 0px 1px,
+              rgba(0, 0, 0, 0.04) 0px 2px 3px 0px,
+              rgba(34, 42, 53, 0.04) 0px 4px 6px 0px,
+              rgba(0, 0, 0, 0.05) 0px 1px 1px 0px;
+}
+
+.shadow-deep {
+  box-shadow: rgba(19, 19, 22, 0.05) 0px 0px 0px 1px,
+              rgba(0, 0, 0, 0.04) 0px 2px 3px 0px,
+              rgba(47, 48, 55, 0.05) 0px 24px 68px 0px,
+              rgba(34, 42, 53, 0.04) 0px 4px 6px 0px,
+              rgba(0, 0, 0, 0.05) 0px 1px 1px 0px;
+}
+
+/* Faint Grid Background Texture */
+.bg-grid-faint {
+  background-size: 32px 32px;
+  background-image: linear-gradient(to right, rgba(228, 228, 231, 0.5) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(228, 228, 231, 0.5) 1px, transparent 1px);
+}
+
+/* Leaflet map customization */
 .leaflet-default-icon-path {
   background-image: url("https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png");
 }
 
-/* Custom scrollbars */
+/* Minimalist scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #fce5df;
-  border-radius: 9999px;
+  background: #cccccc;
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #f29ebd;
+  background: #696969;
 }

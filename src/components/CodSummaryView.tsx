@@ -86,33 +86,31 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5 font-clash bg-[#fff8f6]">
-      {/* Top Hero Statement: Agence Foudre Typography */}
-      <div className="bg-[#fce5df]/60 border border-[#fce5df] rounded-[20px] p-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-[#00522d]">
-          KASIR REKONSILIASI
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5 font-aspekta bg-[#fafafa]">
+      {/* Top Floating Card: Qatchup Monochromatic Restraint */}
+      <div className="bg-[#fafafa] rounded-[32px] p-6 sm:p-7 shadow-subtle border border-[#e4e4e7]/70">
+        <p className="font-fasthand text-2xl text-[#696969] leading-none mb-1">
+          rekonsiliasi kasir,
         </p>
-        <div className="my-2">
-          <span className="font-beni font-black text-5xl sm:text-7xl text-[#db3c8a] tracking-tight leading-none block">
-            {formatRupiah(totalCollected)}
-          </span>
-          <p className="text-xs text-[#00522d] mt-1 font-medium">
-            Total uang fisik COD yang wajib disetor sore ini dari {deliveredCod.length} paket terbayar.
-          </p>
-        </div>
+        <span className="text-3xl sm:text-5xl font-normal text-[#080808] tracking-[-0.035em] block leading-none my-2">
+          {formatRupiah(totalCollected)}
+        </span>
+        <p className="text-xs text-[#696969] mt-1 max-w-md">
+          Total uang fisik COD yang wajib disetor ke kasir Drop Point sore ini dari {deliveredCod.length} paket berhasil.
+        </p>
 
         <button
           onClick={handleCopyReport}
-          className="mt-4 flex items-center justify-center gap-2 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-bold text-xs py-3 px-6 rounded-[10px] transition cursor-pointer"
+          className="mt-4 flex items-center justify-center gap-2 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-3 px-6 rounded-full transition shadow-sm cursor-pointer"
         >
           {copied ? (
             <>
-              <Check className="w-4 h-4 stroke-[3]" />
+              <Check className="w-3.5 h-3.5" />
               <span>Format Laporan Tersalin!</span>
             </>
           ) : (
             <>
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-3.5 h-3.5" />
               <span>Salin Laporan WhatsApp</span>
             </>
           )}
@@ -120,21 +118,21 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
       </div>
 
       {/* Kalkulator Pecahan Uang Fisik */}
-      <div className="bg-[#fff8f6] border border-[#fce5df] rounded-[20px] p-6 space-y-4">
+      <div className="bg-[#fafafa] rounded-[32px] p-6 sm:p-7 shadow-subtle border border-[#e4e4e7]/70 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-base text-[#00522d] flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-[#db3c8a]" />
+            <h3 className="font-medium text-base text-[#080808] tracking-[-0.015em] flex items-center gap-2">
+              <Calculator className="w-4 h-4 text-[#292929]" />
               Kalkulator Pecahan Uang Fisik
             </h3>
-            <p className="text-xs text-[#00522d]/80 mt-0.5">
-              Hitung lembaran fisik di dompet agar klop dengan kasir Drop Point
+            <p className="text-xs text-[#696969] mt-0.5">
+              Hitung lembaran fisik di dompet agar klop saat setoran sore
             </p>
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] text-[#00522d] uppercase font-bold block">Uang Fisik:</span>
-            <span className="text-base font-bold text-[#db3c8a]">
+            <span className="text-[10px] text-[#696969] block">Total Fisik:</span>
+            <span className="text-sm sm:text-base font-medium text-[#080808]">
               {formatRupiah(physicalCashTotal)}
             </span>
           </div>
@@ -142,12 +140,12 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
 
         {physicalCashTotal > 0 && (
           <div
-            className={`p-3 rounded-[10px] text-xs font-bold ${
+            className={`p-3 rounded-[16px] text-xs font-medium border ${
               difference === 0
-                ? 'bg-[#00522d] text-white'
+                ? 'bg-[#f4f4f5] text-[#080808] border-[#292929]'
                 : difference > 0
-                ? 'bg-[#fce5df] text-[#00522d] border border-[#fce5df]'
-                : 'bg-[#db3c8a] text-white'
+                ? 'bg-[#f4f4f5] text-[#222222] border-[#e4e4e7]'
+                : 'bg-[#f4f4f5] text-[#080808] border-[#696969]'
             }`}
           >
             {difference === 0
@@ -162,13 +160,13 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
           {[100000, 50000, 20000, 10000, 5000, 2000, 1000].map((denom) => (
             <div
               key={denom}
-              className="bg-[#fce5df]/60 rounded-[10px] p-2.5 border border-[#fce5df] flex items-center justify-between"
+              className="bg-[#f4f4f5] rounded-[16px] p-3 border border-[#e4e4e7] flex items-center justify-between"
             >
               <div>
-                <span className="text-xs font-bold text-[#00522d] block">
+                <span className="text-xs font-medium text-[#080808] block">
                   Rp {denom.toLocaleString('id-ID')}
                 </span>
-                <span className="text-[10px] text-[#00522d]/70 font-mono">
+                <span className="text-[10px] text-[#696969] font-mono">
                   = {formatRupiah(denom * (cashCounts[denom] || 0))}
                 </span>
               </div>
@@ -178,7 +176,7 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
                 value={cashCounts[denom] || ''}
                 onChange={(e) => handleCountChange(denom, parseInt(e.target.value, 10))}
                 placeholder="0"
-                className="w-14 bg-[#fff8f6] border border-[#fce5df] text-center font-bold text-[#00522d] text-xs py-1 rounded-[6px] focus:outline-none focus:border-[#db3c8a]"
+                className="w-14 bg-[#fafafa] border border-[#e4e4e7] text-center font-medium text-[#080808] text-xs py-1 rounded-full focus:outline-none focus:border-[#292929]"
               />
             </div>
           ))}

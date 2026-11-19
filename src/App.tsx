@@ -224,8 +224,8 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fff8f6] text-[#00522d] flex flex-col font-clash selection:bg-[#db3c8a] selection:text-white">
-      {/* Editorial Agence Foudre Header */}
+    <div className="min-h-screen bg-[#fafafa] text-[#222222] flex flex-col font-aspekta selection:bg-[#292929] selection:text-[#fafafa] bg-grid-faint">
+      {/* Qatchup Monochromatic Header */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -285,31 +285,36 @@ export function App() {
 
         {activeTab === 'scan' && (
           <div className="p-4 max-w-lg mx-auto space-y-4">
-            <div className="bg-[#fce5df]/60 border border-[#fce5df] rounded-[24px] p-6 text-center space-y-3">
-              <div className="w-16 h-16 bg-[#db3c8a] text-white rounded-full flex items-center justify-center mx-auto">
-                <Camera className="w-8 h-8 stroke-[2.2]" />
+            <div className="bg-[#fafafa] rounded-[32px] p-7 text-center space-y-3.5 shadow-subtle border border-[#e4e4e7]">
+              <div className="w-14 h-14 bg-[#292929] text-[#fafafa] rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <Camera className="w-6 h-6 stroke-[1.8]" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-[#00522d]">Scan Kamera / Tambah Paket</h3>
-                <p className="text-xs text-[#00522d]/70 mt-1">
-                  Ambil foto resi fisik J&T atau masukkan nomor dan alamat untuk diurutkan ke rute
+                <p className="font-fasthand text-2xl text-[#696969] leading-none mb-1">
+                  tambah paket baru,
+                </p>
+                <h3 className="font-normal text-xl text-[#080808] tracking-[-0.025em]">
+                  Scan Kamera atau Ketik Resi
+                </h3>
+                <p className="text-xs text-[#696969] mt-1 max-w-xs mx-auto">
+                  Ambil foto resi paket J&T menggunakan kamera untuk otomatis membaca alamat & susun rute
                 </p>
               </div>
 
               <div className="pt-2 flex flex-col gap-2.5">
                 <button
                   onClick={() => setIsScanOpen(true)}
-                  className="w-full py-3.5 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-bold text-sm rounded-full transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs rounded-full transition shadow-sm cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <Camera className="w-4 h-4 stroke-[2.5]" />
+                  <Camera className="w-4 h-4 stroke-[2]" />
                   <span>Buka Scanner Kamera Resi</span>
                 </button>
 
                 <button
                   onClick={handleLoadSampleData}
-                  className="w-full py-3 bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] font-bold text-xs rounded-full border border-[#fce5df] transition cursor-pointer"
+                  className="w-full py-3 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs rounded-full border border-[#e4e4e7] transition cursor-pointer"
                 >
-                  Muat Ulang 6 Paket Contoh J&T
+                  Muat Ulang 6 Paket Contoh
                 </button>
               </div>
             </div>

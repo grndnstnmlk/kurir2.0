@@ -3,10 +3,7 @@ import { createWorker } from 'tesseract.js';
 import {
   Camera,
   Upload,
-  Check,
   X,
-  FileText,
-  DollarSign,
   Loader2,
 } from 'lucide-react';
 import type { DeliveryPackage, CourierSettings } from '../types';
@@ -134,28 +131,32 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto font-clash">
-      <div className="bg-[#fff8f6] border border-[#fce5df] rounded-[24px] w-full max-w-lg shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col text-[#00522d]">
-        <div className="px-6 py-4 bg-[#fce5df]/50 border-b border-[#fce5df] flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto font-aspekta">
+      {/* Floating Modal with 32px Radius & Deep Layered Elevation */}
+      <div className="bg-[#fafafa] rounded-[32px] w-full max-w-lg shadow-deep border border-[#e4e4e7] overflow-hidden my-auto max-h-[92vh] flex flex-col text-[#222222]">
+        <div className="px-7 py-5 bg-[#fafafa] border-b border-[#e4e4e7] flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-base text-[#00522d]">Scan Foto Resi / Tambah Paket</h2>
-            <p className="text-xs text-[#00522d]/70">Otomatis membaca data resi dan patokan alamat</p>
+            <h2 className="font-medium text-lg text-[#080808] tracking-[-0.015em]">
+              Scan Resi / Tambah Paket
+            </h2>
+            <p className="text-xs text-[#696969]">Otomatis membaca data resi dan patokan alamat</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-[#fce5df] text-[#00522d] transition cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-[#f4f4f5] text-[#696969] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-4">
-          <div className="flex bg-[#fce5df] p-1 rounded-full text-xs font-bold">
+        <div className="p-7 overflow-y-auto space-y-4">
+          {/* Pill Mode Switcher */}
+          <div className="flex bg-[#f4f4f5] p-1 rounded-full text-xs font-medium">
             <button
               type="button"
               onClick={() => setMode('camera')}
               className={`flex-1 py-2 rounded-full transition cursor-pointer ${
-                mode === 'camera' ? 'bg-[#db3c8a] text-white' : 'text-[#00522d]'
+                mode === 'camera' ? 'bg-[#292929] text-[#fafafa]' : 'text-[#696969]'
               }`}
             >
               Foto / Kamera Resi
@@ -164,7 +165,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               type="button"
               onClick={() => setMode('manual')}
               className={`flex-1 py-2 rounded-full transition cursor-pointer ${
-                mode === 'manual' ? 'bg-[#db3c8a] text-white' : 'text-[#00522d]'
+                mode === 'manual' ? 'bg-[#292929] text-[#fafafa]' : 'text-[#696969]'
               }`}
             >
               Ketik Manual
@@ -172,28 +173,28 @@ export const ScanModal: React.FC<ScanModalProps> = ({
           </div>
 
           {mode === 'camera' && (
-            <div className="border-2 border-dashed border-[#fce5df] rounded-[20px] p-5 text-center bg-[#fce5df]/30 space-y-3">
+            <div className="border border-[#e4e4e7] rounded-[24px] p-6 text-center bg-[#fafafa] space-y-3 shadow-subtle">
               {imagePreview ? (
                 <div>
                   <img
                     src={imagePreview}
                     alt="Pratinjau Resi"
-                    className="max-h-48 mx-auto rounded-[12px] object-contain border border-[#fce5df]"
+                    className="max-h-48 mx-auto rounded-[16px] object-contain border border-[#e4e4e7]"
                   />
                   {isProcessingOcr && (
-                    <div className="flex items-center justify-center gap-2 mt-3 text-xs font-bold text-[#db3c8a]">
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                    <div className="flex items-center justify-center gap-2 mt-3 text-xs font-medium text-[#080808]">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#292929]" />
                       <span>Membaca tulisan resi... ({ocrProgress}%)</span>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="py-4 space-y-3">
-                  <p className="text-xs font-bold text-[#00522d]">
-                    Foto resi paket J&T menggunakan kamera iPhone
+                  <p className="text-xs text-[#696969]">
+                    Foto resi paket J&T menggunakan kamera ponsel Anda
                   </p>
                   <div className="flex items-center justify-center gap-2">
-                    <label className="bg-[#db3c8a] hover:bg-[#c22e77] text-white font-bold text-xs px-4 py-2.5 rounded-full cursor-pointer transition">
+                    <label className="bg-[#292929] hover:bg-[#080808] text-[#fafafa] font-medium text-xs px-5 py-2.5 rounded-full cursor-pointer transition shadow-sm">
                       <span>Buka Kamera</span>
                       <input
                         type="file"
@@ -207,7 +208,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                         }}
                       />
                     </label>
-                    <label className="bg-[#fce5df] text-[#00522d] font-bold text-xs px-4 py-2.5 rounded-full cursor-pointer border border-[#fce5df] transition">
+                    <label className="bg-[#f4f4f5] text-[#222222] font-medium text-xs px-5 py-2.5 rounded-full cursor-pointer border border-[#e4e4e7] transition">
                       <span>Pilih File</span>
                       <input
                         type="file"
@@ -226,44 +227,44 @@ export const ScanModal: React.FC<ScanModalProps> = ({
             </div>
           )}
 
-          <form onSubmit={handleSave} className="space-y-3 text-xs">
+          <form onSubmit={handleSave} className="space-y-3.5 text-xs">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-[#00522d] mb-1">Nomor Resi:</label>
+                <label className="block text-[#696969] mb-1 font-medium">Nomor Resi:</label>
                 <input
                   type="text"
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   placeholder="Misal: JX1234567890"
-                  className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] px-3 py-2 text-[#00522d] font-mono font-bold focus:outline-none focus:border-[#db3c8a]"
+                  className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-3.5 py-2 text-[#080808] font-mono focus:outline-none focus:border-[#292929]"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[#00522d] mb-1">Nama Penerima:</label>
+                <label className="block text-[#696969] mb-1 font-medium">Nama Penerima:</label>
                 <input
                   type="text"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
                   placeholder="Nama customer"
-                  className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] px-3 py-2 text-[#00522d] font-bold focus:outline-none focus:border-[#db3c8a]"
+                  className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-3.5 py-2 text-[#080808] focus:outline-none focus:border-[#292929]"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block font-bold text-[#00522d] mb-1">No. HP / WhatsApp:</label>
+              <label className="block text-[#696969] mb-1 font-medium">No. HP / WhatsApp:</label>
               <input
                 type="text"
                 value={recipientPhone}
                 onChange={(e) => setRecipientPhone(e.target.value)}
                 placeholder="081234567890"
-                className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] px-3 py-2 text-[#00522d] font-mono focus:outline-none focus:border-[#db3c8a]"
+                className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-3.5 py-2 text-[#080808] font-mono focus:outline-none focus:border-[#292929]"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-[#00522d] mb-1">Alamat Lengkap:</label>
+              <label className="block text-[#696969] mb-1 font-medium">Alamat Lengkap:</label>
               <textarea
                 rows={2}
                 value={fullAddress}
@@ -272,35 +273,35 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   if (!areaOrStreet) setAreaOrStreet(e.target.value.slice(0, 30));
                 }}
                 placeholder="Jl. Mawar No. 10, RT 02/RW 03..."
-                className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] px-3 py-2 text-[#00522d] focus:outline-none focus:border-[#db3c8a]"
+                className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-[16px] px-3.5 py-2 text-[#080808] focus:outline-none focus:border-[#292929]"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-[#00522d] mb-1">Patokan Alamat:</label>
+              <label className="block text-[#696969] mb-1 font-medium">Patokan Alamat:</label>
               <input
                 type="text"
                 value={benchmark}
                 onChange={(e) => setBenchmark(e.target.value)}
                 placeholder="Pagar hitam / samping warung Bu Joko"
-                className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] px-3 py-2 text-[#00522d] focus:outline-none focus:border-[#db3c8a]"
+                className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-3.5 py-2 text-[#080808] focus:outline-none focus:border-[#292929]"
               />
             </div>
 
-            <div className="bg-[#fce5df]/60 p-3 rounded-[12px] border border-[#fce5df] space-y-2">
+            <div className="bg-[#f4f4f5] p-3.5 rounded-[20px] border border-[#e4e4e7] space-y-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isCod}
                   onChange={(e) => setIsCod(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#db3c8a] focus:ring-[#db3c8a]"
+                  className="w-4 h-4 rounded text-[#292929] focus:ring-[#292929]"
                 />
-                <span className="text-xs font-bold text-[#00522d]">Paket COD (Bayar di Tempat)</span>
+                <span className="text-xs font-medium text-[#080808]">Paket COD (Bayar di Tempat)</span>
               </label>
 
               {isCod && (
                 <div>
-                  <label className="block text-[11px] font-bold text-[#00522d] mb-1">
+                  <label className="block text-[11px] text-[#696969] mb-1">
                     Nominal COD (Rp):
                   </label>
                   <input
@@ -308,24 +309,24 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                     value={codAmount || ''}
                     onChange={(e) => setCodAmount(Number(e.target.value))}
                     placeholder="Contoh: 75000"
-                    className="w-full bg-[#fff8f6] border border-[#fce5df] rounded-[8px] px-3 py-2 text-[#db3c8a] font-mono font-bold focus:outline-none"
+                    className="w-full bg-[#fafafa] border border-[#e4e4e7] rounded-full px-3.5 py-2 text-[#080808] font-mono focus:outline-none"
                   />
                 </div>
               )}
             </div>
 
-            <div className="pt-2 flex items-center gap-2">
+            <div className="pt-2 flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-3 rounded-[10px] bg-[#fce5df] text-[#00522d] font-bold transition cursor-pointer"
+                className="flex-1 py-3 rounded-full bg-[#f4f4f5] text-[#222222] font-medium transition cursor-pointer border border-[#e4e4e7]"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={isSaving || isProcessingOcr}
-                className="flex-2 py-3 rounded-[10px] bg-[#db3c8a] hover:bg-[#c22e77] text-white font-bold transition cursor-pointer"
+                className="flex-2 py-3 rounded-full bg-[#292929] hover:bg-[#080808] text-[#fafafa] font-medium transition cursor-pointer shadow-sm"
               >
                 {isSaving ? 'Menyimpan...' : 'Simpan Paket ke Rute'}
               </button>

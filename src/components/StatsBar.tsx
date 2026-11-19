@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, RefreshCw, ExternalLink, DollarSign, ArrowUpDown } from 'lucide-react';
+import { RefreshCw, ExternalLink, ArrowUpDown } from 'lucide-react';
 import type { DeliveryPackage, RouteStrategy } from '../types';
 
 interface StatsBarProps {
@@ -34,41 +34,47 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   };
 
   return (
-    <div className="bg-[#fff8f6] border-b border-[#fce5df] px-4 py-3 font-clash">
-      <div className="max-w-4xl mx-auto space-y-3">
-        {/* 4 Minimal Metric Cards in Agence Foudre Style */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="bg-[#fce5df]/60 rounded-[12px] p-3 border border-[#fce5df]">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#00522d]">Total Paket</p>
-            <p className="text-2xl font-black font-beni text-[#db3c8a] mt-0.5">{total}</p>
+    <div className="bg-[#fafafa] border-b border-[#e4e4e7] px-5 py-4 font-aspekta">
+      <div className="max-w-4xl mx-auto space-y-3.5">
+        {/* 4 Floating Metric Cards with Layered Hairline Shadows */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-[#fafafa] rounded-[24px] p-4 shadow-subtle border border-[#e4e4e7]/60">
+            <span className="text-xs text-[#696969] tracking-[-0.010em] block">Total Paket</span>
+            <span className="text-2xl sm:text-3xl font-normal text-[#080808] tracking-[-0.030em] mt-0.5 block">
+              {total}
+            </span>
           </div>
 
-          <div className="bg-[#fce5df]/60 rounded-[12px] p-3 border border-[#fce5df]">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#00522d]">Terkirim</p>
-            <p className="text-2xl font-black font-beni text-[#00522d] mt-0.5">{delivered}</p>
+          <div className="bg-[#fafafa] rounded-[24px] p-4 shadow-subtle border border-[#e4e4e7]/60">
+            <span className="text-xs text-[#696969] tracking-[-0.010em] block">Terkirim</span>
+            <span className="text-2xl sm:text-3xl font-normal text-[#080808] tracking-[-0.030em] mt-0.5 block">
+              {delivered}
+            </span>
           </div>
 
-          <div className="bg-[#fce5df]/60 rounded-[12px] p-3 border border-[#fce5df]">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#00522d]">Sisa / Pending</p>
-            <p className="text-2xl font-black font-beni text-[#db3c8a] mt-0.5">{pending}</p>
+          <div className="bg-[#fafafa] rounded-[24px] p-4 shadow-subtle border border-[#e4e4e7]/60">
+            <span className="text-xs text-[#696969] tracking-[-0.010em] block">Sisa / Pending</span>
+            <span className="text-2xl sm:text-3xl font-normal text-[#080808] tracking-[-0.030em] mt-0.5 block">
+              {pending}
+            </span>
           </div>
 
-          <div className="bg-[#fce5df]/60 rounded-[12px] p-3 border border-[#fce5df]">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#00522d]">COD Terkumpul</p>
-            <p className="text-sm font-bold text-[#db3c8a] mt-1.5 truncate" title={formatRupiah(codCollected)}>
+          <div className="bg-[#fafafa] rounded-[24px] p-4 shadow-subtle border border-[#e4e4e7]/60">
+            <span className="text-xs text-[#696969] tracking-[-0.010em] block">COD Terkumpul</span>
+            <span className="text-sm sm:text-base font-medium text-[#080808] tracking-[-0.015em] mt-1.5 block truncate" title={formatRupiah(codCollected)}>
               {formatRupiah(codCollected)}
-            </p>
+            </span>
           </div>
         </div>
 
-        {/* Controls: Strategy Selector & Actions */}
+        {/* Controls: Strategy Selector & Pill Action Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-[#00522d] font-bold whitespace-nowrap">Strategi Rute:</span>
+            <span className="text-[#696969] font-medium whitespace-nowrap">Strategi Rute:</span>
             <select
               value={strategy}
               onChange={(e) => onChangeStrategy(e.target.value as RouteStrategy)}
-              className="bg-[#fce5df] text-[#00522d] font-bold px-3 py-1.5 rounded-[10px] border border-[#fce5df] focus:outline-none cursor-pointer w-full sm:w-auto"
+              className="bg-[#f4f4f5] text-[#222222] font-medium px-3.5 py-1.5 rounded-full border border-[#e4e4e7] focus:outline-none cursor-pointer w-full sm:w-auto"
             >
               <option value="farthest-first">Titik Terjauh Mundur (Rekomendasi Pro)</option>
               <option value="nearest-first">Terdekat Duluan</option>
@@ -79,18 +85,18 @@ export const StatsBar: React.FC<StatsBarProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onOptimize}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] px-3.5 py-1.5 rounded-[10px] font-bold border border-[#fce5df] transition cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] px-4 py-1.5 rounded-full font-medium border border-[#e4e4e7] transition cursor-pointer"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-[#db3c8a]" />
+              <RefreshCw className="w-3.5 h-3.5 text-[#696969]" />
               <span>Urutkan Rute</span>
             </button>
 
             <button
               onClick={onOpenMultiStopMap}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white px-3.5 py-1.5 rounded-[10px] font-bold transition cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] px-4 py-1.5 rounded-full font-medium transition cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Buka Google Maps</span>
+              <span>Google Maps Rute</span>
             </button>
           </div>
         </div>

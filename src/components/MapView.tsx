@@ -28,6 +28,7 @@ export const MapView: React.FC<MapViewProps> = ({
         zoomControl: false,
       });
 
+      // CartoDB Voyager or Light Tiles
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 19,
@@ -52,12 +53,12 @@ export const MapView: React.FC<MapViewProps> = ({
 
     const latLngs: L.LatLngExpression[] = [];
 
-    // Drop Point Marker in Lipstick Magenta
+    // Drop Point Marker in Charcoal #080808
     const dpIcon = L.divIcon({
       className: 'custom-dp-marker',
       html: `
-        <div style="background: #db3c8a; color: white; border: 2.5px solid #fff8f6; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px;">
-          ⚡
+        <div style="background: #080808; color: #fafafa; border: 2.5px solid #fafafa; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; box-shadow: rgba(19,19,22,0.15) 0 4px 10px;">
+          DP
         </div>
       `,
       iconSize: [36, 36],
@@ -67,11 +68,11 @@ export const MapView: React.FC<MapViewProps> = ({
     const dpMarker = L.marker([settings.dropPointLat, settings.dropPointLng], {
       icon: dpIcon,
     }).bindPopup(`
-      <div style="font-family: system-ui, sans-serif; padding: 4px; color: #00522d;">
-        <b style="color: #db3c8a; font-size: 14px;">⚡ ${settings.dropPointName}</b>
-        <p style="margin: 4px 0 0; font-size: 12px;">${settings.dropPointAddress}</p>
-        <div style="margin-top: 6px; font-size: 11px; background: #fce5df; color: #00522d; padding: 2px 8px; border-radius: 9999px; display: inline-block; font-weight: bold;">
-          Drop Point J&T Express
+      <div style="font-family: system-ui, sans-serif; padding: 4px; color: #222222;">
+        <b style="color: #080808; font-size: 14px;">🏢 ${settings.dropPointName}</b>
+        <p style="margin: 4px 0 0; font-size: 12px; color: #696969;">${settings.dropPointAddress}</p>
+        <div style="margin-top: 6px; font-size: 11px; background: #f4f4f5; color: #080808; padding: 2px 10px; border-radius: 999px; display: inline-block; font-weight: 600;">
+          Gudang Asal
         </div>
       </div>
     `);
@@ -79,15 +80,15 @@ export const MapView: React.FC<MapViewProps> = ({
     markersLayer.addLayer(dpMarker);
     latLngs.push([settings.dropPointLat, settings.dropPointLng]);
 
-    // Package Stop Markers
+    // Package Stop Markers in Monochromatic Mid Ink #292929
     packages.forEach((pkg) => {
       const isDelivered = pkg.status === 'delivered';
-      const bgColor = isDelivered ? '#00522d' : '#db3c8a';
+      const bgColor = isDelivered ? '#696969' : '#292929';
 
       const stopIcon = L.divIcon({
         className: 'custom-stop-marker',
         html: `
-          <div style="background: ${bgColor}; color: white; border: 2.5px solid #fff8f6; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; font-family: sans-serif;">
+          <div style="background: ${bgColor}; color: #fafafa; border: 2.5px solid #fafafa; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; font-family: system-ui, sans-serif; box-shadow: rgba(19,19,22,0.15) 0 2px 8px;">
             ${pkg.orderIndex}
           </div>
         `,
@@ -98,26 +99,26 @@ export const MapView: React.FC<MapViewProps> = ({
       const navUrl = getSingleNavigationUrl(pkg.lat, pkg.lng, pkg.fullAddress);
 
       const marker = L.marker([pkg.lat, pkg.lng], { icon: stopIcon }).bindPopup(`
-        <div style="font-family: system-ui, sans-serif; min-width: 180px; padding: 2px; color: #00522d;">
+        <div style="font-family: system-ui, sans-serif; min-width: 190px; padding: 3px; color: #222222;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-            <span style="background: ${bgColor}; color: white; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 9999px;">
+            <span style="background: ${bgColor}; color: white; font-weight: 600; font-size: 11px; padding: 2px 8px; border-radius: 999px;">
               STOP #${pkg.orderIndex}
             </span>
-            <span style="font-size: 10px; font-weight: 700; color: #00522d;">${pkg.trackingNumber}</span>
+            <span style="font-size: 10px; color: #696969;">${pkg.trackingNumber}</span>
           </div>
-          <b style="font-size: 14px; color: #00522d;">${pkg.recipientName}</b>
-          <p style="margin: 4px 0 2px; font-size: 12px; color: #00522d; line-height: 1.3;">${pkg.fullAddress}</p>
+          <b style="font-size: 14px; color: #080808;">${pkg.recipientName}</b>
+          <p style="margin: 4px 0 2px; font-size: 12px; color: #696969; line-height: 1.3;">${pkg.fullAddress}</p>
           ${
             pkg.isCod
-              ? `<div style="background: #fce5df; color: #db3c8a; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 9999px; margin: 6px 0;">
-                  💰 COD: Rp ${pkg.codAmount.toLocaleString('id-ID')}
+              ? `<div style="background: #f4f4f5; color: #080808; font-weight: 600; font-size: 11px; padding: 3px 8px; border-radius: 999px; margin: 6px 0; border: 1px solid #e4e4e7;">
+                  COD: Rp ${pkg.codAmount.toLocaleString('id-ID')}
                 </div>`
-              : `<div style="background: #fce5df; color: #00522d; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 9999px; margin: 6px 0;">
+              : `<div style="background: #f4f4f5; color: #696969; font-weight: 500; font-size: 11px; padding: 2px 8px; border-radius: 999px; margin: 6px 0;">
                   Lunas (Non-COD)
                 </div>`
           }
           <div style="margin-top: 8px;">
-            <a href="${navUrl}" target="_blank" style="display: block; text-align: center; background: #db3c8a; color: white; text-decoration: none; padding: 6px 8px; border-radius: 8px; font-size: 12px; font-weight: bold;">
+            <a href="${navUrl}" target="_blank" style="display: block; text-align: center; background: #292929; color: #fafafa; text-decoration: none; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 500;">
               Buka Google Maps →
             </a>
           </div>
@@ -130,10 +131,10 @@ export const MapView: React.FC<MapViewProps> = ({
 
     if (latLngs.length > 1) {
       const polyline = L.polyline(latLngs, {
-        color: '#db3c8a',
-        weight: 3,
-        opacity: 0.85,
-        dashArray: '6, 6',
+        color: '#292929',
+        weight: 2.5,
+        opacity: 0.8,
+        dashArray: '5, 5',
       }).addTo(map);
       routeLineRef.current = polyline;
 
@@ -157,25 +158,25 @@ export const MapView: React.FC<MapViewProps> = ({
 
   return (
     <div className="relative w-full h-[calc(100vh-190px)] min-h-[480px]">
-      <div ref={mapContainerRef} className="w-full h-full z-0 bg-[#fff8f6]" />
+      <div ref={mapContainerRef} className="w-full h-full z-0 bg-[#fafafa]" />
 
-      <div className="absolute bottom-4 left-4 right-4 z-10 bg-[#fff8f6]/95 border border-[#fce5df] rounded-[16px] p-3 shadow-lg flex items-center justify-between text-xs font-clash text-[#00522d]">
+      <div className="absolute bottom-4 left-4 right-4 z-10 bg-[#fafafa]/95 border border-[#e4e4e7] rounded-full px-5 py-3 shadow-subtle flex items-center justify-between text-xs font-aspekta text-[#222222]">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[#db3c8a] inline-block"></span>
-            <span>Stop Belum</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#292929] inline-block"></span>
+            <span className="text-[#696969]">Belum Diantar</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[#00522d] inline-block"></span>
-            <span>Terkirim</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#696969] inline-block"></span>
+            <span className="text-[#696969]">Terkirim</span>
           </div>
         </div>
 
         <button
           onClick={handleCenterMap}
-          className="flex items-center gap-1 bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] px-3 py-1.5 rounded-full font-bold transition cursor-pointer border border-[#fce5df]"
+          className="flex items-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] px-3.5 py-1.5 rounded-full font-medium transition cursor-pointer border border-[#e4e4e7]"
         >
-          <Compass className="w-3.5 h-3.5 text-[#db3c8a]" />
+          <Compass className="w-3.5 h-3.5 text-[#292929]" />
           <span>Fokus Peta</span>
         </button>
       </div>

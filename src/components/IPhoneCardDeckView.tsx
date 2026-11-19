@@ -9,7 +9,7 @@ import {
   DollarSign,
   Package as PackageIcon,
   Check,
-  Zap,
+  ArrowRight,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus } from '../types';
 import { getSingleNavigationUrl } from '../utils/routeOptimizer';
@@ -34,21 +34,22 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   if (packages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] px-6 text-center text-[#00522d]">
-        <div className="w-20 h-20 rounded-full bg-[#fce5df] flex items-center justify-center mb-5 text-[#db3c8a]">
-          <PackageIcon className="w-10 h-10" />
+      <div className="flex flex-col items-center justify-center min-h-[500px] px-6 text-center text-[#222222] font-aspekta">
+        <div className="w-16 h-16 rounded-[24px] bg-[#f4f4f5] border border-[#e4e4e7] flex items-center justify-center mb-4 text-[#292929]">
+          <PackageIcon className="w-8 h-8 stroke-[1.5]" />
         </div>
-        <h2 className="text-4xl font-black font-beni text-[#db3c8a] uppercase leading-none">
-          SEMUA SELESAI
+        <p className="font-fasthand text-2xl text-[#696969] mb-1">semua beres,</p>
+        <h2 className="text-3xl font-normal text-[#080808] tracking-[-0.03em]">
+          Tidak Ada Paket Tersisa
         </h2>
-        <p className="text-sm font-clash text-[#00522d] mt-2 max-w-xs mx-auto">
-          Tidak ada paket aktif untuk diantar saat ini.
+        <p className="text-sm text-[#696969] mt-2 max-w-xs mx-auto">
+          Semua antaran hari ini telah diselesaikan atau diarsipkan.
         </p>
         <button
           onClick={onOpenScan}
-          className="mt-6 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-bold text-xs px-6 py-3.5 rounded-full transition cursor-pointer"
+          className="mt-6 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs px-6 py-3 rounded-full transition shadow-sm cursor-pointer"
         >
-          + Scan Resi Paket Baru
+          + Tambah Resi Baru
         </button>
       </div>
     );
@@ -109,120 +110,116 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   return (
     <div
-      className="flex flex-col justify-between min-h-[calc(100vh-140px)] w-full max-w-xl mx-auto px-5 py-6 select-none bg-[#fff8f6]"
+      className="flex flex-col justify-between min-h-[calc(100vh-140px)] w-full max-w-xl mx-auto px-5 py-6 select-none font-aspekta bg-[#fafafa]"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* 1. Category / Section Label (Clash Grotesk 12-14px in #00522d) */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#db3c8a]"></span>
-          <span className="text-xs font-bold uppercase tracking-wider text-[#00522d] font-clash">
-            URUTAN JALAN {safeIndex + 1} DARI {packages.length}
-          </span>
-        </div>
+      {/* 1. Fasthand Handwritten Kicker (Emotional Signature) */}
+      <div className="flex items-center justify-between mb-1">
+        <span className="font-fasthand text-2xl text-[#696969] leading-none">
+          Antaran ke-{safeIndex + 1} dari {packages.length}
+        </span>
 
-        {/* Status Pill Badge */}
+        {/* Minimal Pill Badge */}
         <span
-          className={`px-3 py-1 rounded-full text-xs font-bold font-clash ${
+          className={`px-3 py-1 rounded-full text-xs font-medium ${
             isDelivered
-              ? 'bg-[#00522d] text-[#fff8f6]'
+              ? 'bg-[#292929] text-[#fafafa]'
               : isProblem
-              ? 'bg-[#db3c8a] text-white'
-              : 'bg-[#fce5df] text-[#00522d]'
+              ? 'bg-[#f4f4f5] text-[#080808] border border-[#b2b2b2]'
+              : 'bg-[#f4f4f5] text-[#222222]'
           }`}
         >
           {isDelivered ? 'Terkirim' : isProblem ? 'Ada Kendala' : 'Belum Diantar'}
         </span>
       </div>
 
-      {/* 2. Faded Echo Headline + Massive Display Headline Block (Beni 900, Line Height 0.70) */}
-      <div className="relative my-3">
-        {/* Faded Echo Headline in #fce5df */}
-        <div className="font-beni font-black text-6xl sm:text-7xl uppercase text-[#fce5df] tracking-tight leading-none pointer-events-none select-none -mb-5 sm:-mb-7">
-          DELIVERY DISPATCH
-        </div>
-
-        {/* Primary Display Headline in #db3c8a (Lipstick Magenta) */}
-        <h1 className="font-beni font-black text-7xl sm:text-8xl md:text-9xl uppercase text-[#db3c8a] tracking-tight leading-[0.72] z-10 relative">
-          STOP #{String(currentPkg.orderIndex).padStart(2, '0')}
+      {/* 2. Display Headline: Aspekta with Negative Tracking */}
+      <div className="my-2">
+        <h1 className="text-4xl sm:text-5xl font-normal text-[#080808] tracking-[-0.035em] leading-[1.14]">
+          Stop #{String(currentPkg.orderIndex).padStart(2, '0')}.
         </h1>
+        <p className="text-xs text-[#696969] tracking-[-0.010em] mt-1 font-mono">
+          {currentPkg.trackingNumber} • {currentPkg.areaOrStreet}
+        </p>
       </div>
 
-      {/* 3. Editorial Badges & Subtitle */}
-      <div className="flex flex-wrap items-center gap-2 my-2">
-        <span className="px-3.5 py-1 rounded-full text-xs font-bold font-clash bg-[#fce5df] text-[#00522d]">
-          {currentPkg.trackingNumber}
-        </span>
+      {/* 3. Floating Content Card (Layered Hairline Shadow, 32px Radius) */}
+      <div className="bg-[#fafafa] rounded-[32px] p-6 sm:p-7 shadow-subtle border border-[#e4e4e7]/70 my-3 space-y-4">
+        {/* Recipient Row */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="text-xs text-[#696969] tracking-[-0.010em] block">
+              Penerima Paket:
+            </span>
+            <h2 className="text-xl sm:text-2xl font-medium text-[#080808] tracking-[-0.020em] mt-0.5">
+              {currentPkg.recipientName}
+            </h2>
+            <p className="text-xs font-mono text-[#696969] mt-0.5">
+              📞 {currentPkg.recipientPhone}
+            </p>
+          </div>
 
-        {currentPkg.isCod ? (
-          <span className="px-3.5 py-1 rounded-full text-xs font-bold font-clash bg-[#db3c8a] text-white flex items-center gap-1">
-            <DollarSign className="w-3.5 h-3.5" />
-            COD: {formatRupiah(currentPkg.codAmount)}
-          </span>
-        ) : (
-          <span className="px-3.5 py-1 rounded-full text-xs font-bold font-clash bg-[#fce5df] text-[#00522d]">
-            Non-COD (Lunas)
-          </span>
-        )}
-      </div>
-
-      {/* 4. Recipient & Full Editorial Address (Clash Grotesk 400-500 in #00522d, max 60ch) */}
-      <div className="bg-[#fce5df]/60 border border-[#fce5df] rounded-[20px] p-5 my-3 space-y-2">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#db3c8a] font-clash">
-            Penerima Paket:
-          </p>
-          <h2 className="text-2xl font-bold font-clash text-[#00522d] leading-snug">
-            {currentPkg.recipientName}
-          </h2>
-          <p className="text-xs font-mono text-[#00522d]/80 mt-0.5">
-            📞 {currentPkg.recipientPhone}
-          </p>
+          {currentPkg.isCod ? (
+            <div className="text-right">
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-[#292929] text-[#fafafa]">
+                COD: {formatRupiah(currentPkg.codAmount)}
+              </span>
+            </div>
+          ) : (
+            <div className="text-right">
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-[#f4f4f5] text-[#696969] border border-[#e4e4e7]">
+                Non-COD (Lunas)
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="pt-2 border-t border-[#fce5df]">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#00522d] font-clash flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-[#db3c8a]" />
+        {/* Hairline Divider */}
+        <div className="h-[1px] bg-[#e4e4e7] w-full" />
+
+        {/* Address Row */}
+        <div>
+          <span className="text-xs text-[#696969] tracking-[-0.010em] block mb-1">
             Alamat Pengantaran:
-          </p>
-          <p className="text-sm text-[#00522d] font-clash leading-relaxed mt-1 max-w-[60ch]">
+          </span>
+          <p className="text-sm text-[#222222] tracking-[-0.010em] leading-relaxed max-w-[55ch]">
             {currentPkg.fullAddress}
           </p>
+
           {currentPkg.benchmark && (
-            <div className="mt-2 text-xs bg-[#fff8f6] p-2.5 rounded-[10px] text-[#00522d] border border-[#fce5df]">
-              <strong className="text-[#db3c8a]">Patokan:</strong> {currentPkg.benchmark}
+            <div className="mt-3 text-xs bg-[#f4f4f5] p-3 rounded-[16px] text-[#222222] border border-[#e4e4e7]/60">
+              <span className="text-[#696969] font-medium">Patokan: </span>
+              <span>{currentPkg.benchmark}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* 5. Horizontal Dotted / Dashes Pagination (Agence Foudre style) */}
-      <div className="flex items-center justify-center gap-2 my-2">
+      {/* 4. Minimal Dash Pagination */}
+      <div className="flex items-center justify-center gap-1.5 my-2">
         {packages.map((_, idx) => {
           const isActive = idx === safeIndex;
           return (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                isActive
-                  ? 'w-10 bg-[#db3c8a]'
-                  : 'w-4 bg-[#fce5df] hover:bg-[#f29ebd]'
+              className={`h-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                isActive ? 'w-8 bg-[#292929]' : 'w-3 bg-[#e4e4e7] hover:bg-[#b2b2b2]'
               }`}
-              title={`Buka Stop #${idx + 1}`}
+              title={`Pindah ke Stop #${idx + 1}`}
             />
           );
         })}
       </div>
 
-      {/* 6. Action Buttons: Lipstick Magenta (#db3c8a) & Blush Cream (#fce5df) */}
+      {/* 5. Pill Action Controls: Dark Pill (Primary) & Light Pill (Secondary) */}
       <div className="grid grid-cols-2 gap-3 pt-2">
         <button
           onClick={() => handleOpenWhatsApp(currentPkg)}
-          className="w-full bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] font-clash font-bold text-sm py-3.5 px-4 rounded-[10px] transition flex items-center justify-center gap-2 cursor-pointer border border-[#fce5df]"
+          className="w-full bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#292929] font-medium text-xs py-3.5 px-4 rounded-full transition flex items-center justify-center gap-2 cursor-pointer border border-[#e4e4e7]"
         >
-          <MessageCircle className="w-4 h-4 text-[#00522d]" />
+          <MessageCircle className="w-3.5 h-3.5 text-[#292929]" />
           <span>Chat WhatsApp</span>
         </button>
 
@@ -230,15 +227,15 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           href={getSingleNavigationUrl(currentPkg.lat, currentPkg.lng, currentPkg.fullAddress)}
           target="_blank"
           rel="noreferrer"
-          className="w-full bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-clash font-bold text-sm py-3.5 px-4 rounded-[10px] transition flex items-center justify-center gap-2 cursor-pointer text-center"
+          className="w-full bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-3.5 px-4 rounded-full transition flex items-center justify-center gap-2 cursor-pointer text-center"
         >
-          <Navigation className="w-4 h-4 text-white" />
-          <span>Navigasi Maps</span>
+          <Navigation className="w-3.5 h-3.5 text-[#fafafa]" />
+          <span>Buka Google Maps</span>
         </a>
       </div>
 
-      {/* 7. Tertiary Actions (Editorial Links) */}
-      <div className="flex items-center justify-between text-xs font-clash font-semibold text-[#00522d] pt-4 border-t border-[#fce5df] mt-4">
+      {/* 6. Tertiary Links: Ghosted Inline Gestures */}
+      <div className="flex items-center justify-between text-xs font-normal text-[#696969] pt-4 border-t border-[#e4e4e7]/60 mt-4">
         <button
           onClick={() =>
             onUpdateStatus(
@@ -246,17 +243,18 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
               currentPkg.status === 'delivered' ? 'pending' : 'delivered'
             )
           }
-          className="flex items-center gap-1.5 hover:text-[#db3c8a] transition cursor-pointer"
+          className="flex items-center gap-1.5 text-[#292929] hover:text-[#080808] transition cursor-pointer"
         >
-          <Check className="w-4 h-4 text-[#db3c8a]" />
+          <Check className="w-3.5 h-3.5" />
           <span>{isDelivered ? 'Batal Terkirim' : 'Tandai Paket Terkirim'}</span>
         </button>
 
         <button
           onClick={onOpenMapTab}
-          className="hover:text-[#db3c8a] transition cursor-pointer underline decoration-[#db3c8a] underline-offset-4"
+          className="flex items-center gap-1 text-[#292929] hover:text-[#080808] transition cursor-pointer"
         >
-          Lihat di Peta Rute →
+          <span>Buka Peta Interaktif</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
