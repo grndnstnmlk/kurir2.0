@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, INITIAL_SAMPLE_PACKAGES, INITIAL_SAMPLE_HISTORY } fro
 import { optimizeDeliveryRoute, getMultiStopNavigationUrl } from './utils/routeOptimizer';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
+import { IPhoneCardDeckView } from './components/IPhoneCardDeckView';
 import { RouteListView } from './components/RouteListView';
 import { MapView } from './components/MapView';
 import { ScanModal } from './components/ScanModal';
@@ -17,7 +18,8 @@ const STORAGE_KEY_SETTINGS = 'kurir2_settings_v1';
 const STORAGE_KEY_HISTORY = 'kurir2_history_v1';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'route' | 'map' | 'scan' | 'cod' | 'history'>('route');
+  // Default to 'deck' (Tampilan iPhone 16 Pro Max ala Refero Design)
+  const [activeTab, setActiveTab] = useState<'deck' | 'route' | 'map' | 'scan' | 'cod' | 'history'>('deck');
   const [isScanOpen, setIsScanOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -91,7 +93,7 @@ export function App() {
       strategy
     );
     setPackages(reordered);
-    setActiveTab('route');
+    setActiveTab('deck');
   };
 
   const handleUpdateStatus = (id: string, status: PackageStatus, notes?: string) => {
@@ -173,7 +175,6 @@ export function App() {
     setPackages(reordered);
   };
 
-  // Arsipkan paket hari ini ke riwayat
   const handleArchiveToday = (notes?: string) => {
     if (packages.length === 0) return;
 
@@ -210,7 +211,6 @@ export function App() {
     };
 
     setHistory((prev) => [newHistoryEntry, ...prev]);
-    // Reset paket hari ini untuk hari baru
     setPackages([]);
     setActiveTab('history');
   };
@@ -221,11 +221,12 @@ export function App() {
 
   const handleRestoreHistory = (entry: DailyHistoryEntry) => {
     setPackages(entry.packages);
-    setActiveTab('route');
+    setActiveTab('deck');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-red-500 selection:text-white">
+    <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-amber-400 selection:text-black">
+      {/* Top Header with iOS Status Bar & Navigation */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -235,24 +236,38 @@ export function App() {
         onOpenScan={() => setIsScanOpen(true)}
       />
 
-      <StatsBar
-        packages={packages}
-        strategy={strategy}
-        onOptimize={handleOptimizeRoute}
-        onOpenMultiStopMap={handleOpenMultiStopMap}
-        onChangeStrategy={(newStrategy) => {
-          setStrategy(newStrategy);
-          const reordered = optimizeDeliveryRoute(
-            packages,
-            settings.dropPointLat,
-            settings.dropPointLng,
-            newStrategy
-          );
-          setPackages(reordered);
-        }}
-      />
+      {/* Stats Bar shown on list/map/cod tabs to keep the Deck view completely clean like Refero */}
+      {activeTab !== 'deck' && (
+        <StatsBar
+          packages={packages}
+          strategy={strategy}
+          onOptimize={handleOptimizeRoute}
+          onOpenMultiStopMap={handleOpenMultiStopMap}
+          onChangeStrategy={(newStrategy) => {
+            setStrategy(newStrategy);
+            const reordered = optimizeDeliveryRoute(
+              packages,
+              settings.dropPointLat,
+              settings.dropPointLng,
+              newStrategy
+            );
+            setPackages(reordered);
+          }}
+        />
+      )}
 
-      <main className="flex-1 pb-20">
+      {/* Main Tab Views */}
+      <main className="flex-1 pb-16">
+        {activeTab === 'deck' && (
+          <IPhoneCardDeckView
+            packages={packages}
+            onUpdateStatus={handleUpdateStatus}
+            whatsAppTemplate={settings.customWhatsAppTemplate}
+            onOpenScan={() => setIsScanOpen(true)}
+            onOpenMapTab={() => setActiveTab('map')}
+          />
+        )}
+
         {activeTab === 'route' && (
           <RouteListView
             packages={packages}
@@ -271,21 +286,21 @@ export function App() {
 
         {activeTab === 'scan' && (
           <div className="p-4 max-w-lg mx-auto space-y-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center space-y-3">
-              <div className="w-14 h-14 bg-red-600/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto border border-red-500/30">
-                <Camera className="w-7 h-7" />
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-center space-y-4">
+              <div className="w-16 h-16 bg-amber-400/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-400/30">
+                <Camera className="w-8 h-8 stroke-[2.5]" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-white">Scan Kamera / Tambah Paket</h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Ambil foto resi fisik J&T atau masukkan nomor dan alamat untuk diurutkan ke dalam rute
+                <h3 className="font-bold text-lg text-white">Scan Kamera / Tambah Paket</h3>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Ambil foto resi fisik J&T atau masukkan nomor dan alamat untuk diurutkan ke rute
                 </p>
               </div>
 
-              <div className="pt-2 flex flex-col gap-2">
+              <div className="pt-2 flex flex-col gap-2.5">
                 <button
                   onClick={() => setIsScanOpen(true)}
-                  className="w-full py-3 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-white hover:bg-zinc-200 active:scale-95 text-black font-black text-sm rounded-2xl shadow-xl transition cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Camera className="w-4 h-4 stroke-[2.5]" />
                   <span>Buka Scanner Kamera Resi</span>
@@ -293,19 +308,19 @@ export function App() {
 
                 <button
                   onClick={handleLoadSampleData}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 font-semibold text-xs rounded-xl border border-slate-700 transition cursor-pointer"
+                  className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-300 font-semibold text-xs rounded-2xl border border-zinc-700 transition cursor-pointer"
                 >
                   Muat Ulang 6 Paket Contoh J&T
                 </button>
               </div>
             </div>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-              <h4 className="font-bold text-xs text-slate-300 uppercase tracking-wider mb-2">
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
+              <h4 className="font-bold text-xs text-zinc-300 uppercase tracking-wider mb-2">
                 Total Paket Terdaftar: {packages.length}
               </h4>
-              <p className="text-xs text-slate-400">
-                Semua data tersimpan otomatis di HP Anda. Jika sinyal mati di jalan, aplikasi tetap berfungsi normal!
+              <p className="text-xs text-zinc-400">
+                Semua data tersimpan otomatis di memori iPhone Anda (offline ready).
               </p>
             </div>
           </div>
@@ -327,17 +342,7 @@ export function App() {
         )}
       </main>
 
-      {/* Floating Action Button on Mobile */}
-      <div className="fixed bottom-4 right-4 z-30">
-        <button
-          onClick={() => setIsScanOpen(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold px-4 py-3.5 rounded-full shadow-2xl shadow-red-600/50 border border-red-400/40 active:scale-95 transition cursor-pointer"
-        >
-          <Camera className="w-5 h-5 stroke-[2.5]" />
-          <span className="text-xs uppercase tracking-wider font-extrabold">+ Scan Paket</span>
-        </button>
-      </div>
-
+      {/* Modals */}
       <ScanModal
         isOpen={isScanOpen}
         onClose={() => setIsScanOpen(false)}
