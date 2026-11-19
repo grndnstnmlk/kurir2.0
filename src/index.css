@@ -1,48 +1,64 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-/* iPhone 16 Pro Max Native Experience & OLED Black */
+@theme {
+  --color-lipstick-magenta: #db3c8a;
+  --color-forest-ink: #00522d;
+  --color-blush-cream: #fce5df;
+  --color-warm-chalk: #fff8f6;
+  --color-charcoal-black: #000000;
+  --color-lilac-mist: #d1cfe4;
+  --color-bubblegum: #f29ebd;
+  --color-cotton-pink: #e878b2;
+
+  --font-beni: 'Antonio', -apple-system, sans-serif;
+  --font-clash: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
 :root {
-  --sat: env(safe-area-inset-top, 0px);
-  --sab: env(safe-area-inset-bottom, 0px);
-  --sal: env(safe-area-inset-left, 0px);
-  --sar: env(safe-area-inset-right, 0px);
+  --color-lipstick-magenta: #db3c8a;
+  --color-forest-ink: #00522d;
+  --color-blush-cream: #fce5df;
+  --color-warm-chalk: #fff8f6;
+  --color-charcoal-black: #000000;
+  --color-lilac-mist: #d1cfe4;
+  --color-bubblegum: #f29ebd;
+  --color-cotton-pink: #e878b2;
 }
 
 html, body, #root {
   min-height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #000000;
-  color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, Roboto, sans-serif;
+  background-color: #fff8f6;
+  color: #00522d;
+  font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
-  user-select: none;
 }
 
-/* Safe area padding helper */
-.safe-top {
-  padding-top: max(env(safe-area-inset-top), 12px);
+.font-beni {
+  font-family: 'Antonio', -apple-system, 'Impact', sans-serif;
+  line-height: 0.72;
 }
 
-.safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+.font-clash {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-/* Leaflet marker customization */
+/* Leaflet marker customization in Agence Foudre palette */
 .leaflet-default-icon-path {
   background-image: url("https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png");
 }
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: #fce5df;
   border-radius: 9999px;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+::-webkit-scrollbar-thumb:hover {
+  background: #f29ebd;
 }

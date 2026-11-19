@@ -69,69 +69,64 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   });
 
   return (
-    <div className="p-3 sm:p-5 max-w-4xl mx-auto space-y-4">
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs font-semibold">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-4 font-clash bg-[#fff8f6]">
+      {/* Editorial Pill Filter Strip */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs font-bold">
         <button
           onClick={() => setFilter('pending')}
-          className={`px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
             filter === 'pending'
-              ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/50'
           }`}
         >
           Belum Diantar ({packages.filter((p) => p.status === 'pending').length})
         </button>
         <button
           onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
             filter === 'all'
-              ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/50'
           }`}
         >
           Semua ({packages.length})
         </button>
         <button
           onClick={() => setFilter('delivered')}
-          className={`px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
             filter === 'delivered'
-              ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/20'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/50'
           }`}
         >
           Terkirim ({packages.filter((p) => p.status === 'delivered').length})
         </button>
         <button
           onClick={() => setFilter('problem')}
-          className={`px-3 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
             filter === 'problem'
-              ? 'bg-rose-600 text-white font-bold shadow-md shadow-rose-600/20'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/50'
           }`}
         >
           Kendala ({packages.filter((p) => p.status === 'rescheduled' || p.status === 'failed').length})
         </button>
       </div>
 
-      {/* Empty State */}
       {filteredPackages.length === 0 && (
-        <div className="text-center py-12 px-4 bg-slate-900/60 rounded-2xl border border-slate-800">
-          <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-80" />
-          <h3 className="text-lg font-bold text-slate-200">
-            {filter === 'pending'
-              ? 'Luar Biasa! Semua Paket Sudah Selesai Diantar! 🎉'
-              : 'Tidak Ada Paket Dalam Kategori Ini'}
+        <div className="text-center py-14 px-4 bg-[#fce5df]/40 rounded-[20px] border border-[#fce5df]">
+          <CheckCircle2 className="w-12 h-12 text-[#00522d] mx-auto mb-3 opacity-80" />
+          <h3 className="text-xl font-black font-beni text-[#db3c8a] uppercase">
+            Semua Paket Sudah Selesai!
           </h3>
-          <p className="text-sm text-slate-400 mt-1">
-            {filter === 'pending'
-              ? 'Periksa tab Rekap COD untuk mencocokkan uang setoran ke kasir Drop Point.'
-              : 'Gunakan tombol + Scan Resi di atas untuk menambahkan paket baru.'}
+          <p className="text-sm text-[#00522d] mt-1">
+            Buka tab Rekap COD untuk mencocokkan uang setoran ke kasir Drop Point.
           </p>
         </div>
       )}
 
-      {/* List of Delivery Stop Cards */}
+      {/* Package Stop Cards */}
       <div className="space-y-3">
         {filteredPackages.map((pkg) => {
           const originalIndex = packages.findIndex((p) => p.id === pkg.id);
@@ -141,47 +136,41 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
           return (
             <div
               key={pkg.id}
-              className={`rounded-2xl border transition-all duration-200 shadow-md ${
+              className={`rounded-[20px] border transition-all ${
                 isDelivered
-                  ? 'bg-emerald-950/20 border-emerald-800/40 opacity-75'
+                  ? 'bg-[#fce5df]/30 border-[#fce5df] opacity-75'
                   : isProblem
-                  ? 'bg-rose-950/20 border-rose-800/40'
-                  : 'bg-slate-800/90 border-slate-700/80 hover:border-red-500/50'
+                  ? 'bg-[#fce5df]/70 border-[#db3c8a]'
+                  : 'bg-[#fff8f6] border-[#fce5df] hover:border-[#db3c8a]'
               }`}
             >
-              {/* Card Header: Stop Number, Status, COD badge */}
-              <div className="px-4 py-3 border-b border-slate-700/60 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-md ${
-                      isDelivered
-                        ? 'bg-emerald-600 text-white'
-                        : isProblem
-                        ? 'bg-rose-600 text-white'
-                        : 'bg-gradient-to-tr from-red-600 to-rose-500 text-white shadow-red-500/25'
-                    }`}
-                  >
+              <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#fce5df]">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-[12px] bg-[#db3c8a] text-white flex items-center justify-center font-beni font-black text-2xl shrink-0">
                     #{pkg.orderIndex}
                   </div>
 
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-slate-200">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-[#00522d]">
                         {pkg.trackingNumber}
                       </span>
                       {pkg.isCod ? (
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#db3c8a] text-white flex items-center gap-1">
                           <DollarSign className="w-3 h-3" />
                           COD: {formatRupiah(pkg.codAmount)}
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                          NON-COD (Lunas)
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fce5df] text-[#00522d]">
+                          Lunas
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 font-medium">
-                      Penerima: <strong className="text-slate-100">{pkg.recipientName}</strong>
+                    <h3 className="text-lg font-bold text-[#00522d] mt-1">
+                      {pkg.recipientName}
+                    </h3>
+                    <p className="text-xs text-[#00522d]/80 font-mono">
+                      {pkg.recipientPhone}
                     </p>
                   </div>
                 </div>
@@ -190,59 +179,47 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                   <button
                     disabled={originalIndex === 0}
                     onClick={() => onMovePackage(originalIndex, 'up')}
-                    title="Naikkan Urutan"
-                    className="p-1 rounded bg-slate-700/70 hover:bg-slate-600 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    className="p-2 rounded-[8px] bg-[#fce5df] hover:bg-[#f29ebd]/50 text-[#00522d] disabled:opacity-30 cursor-pointer"
                   >
                     <ChevronUp className="w-4 h-4" />
                   </button>
                   <button
                     disabled={originalIndex === packages.length - 1}
                     onClick={() => onMovePackage(originalIndex, 'down')}
-                    title="Turunkan Urutan"
-                    className="p-1 rounded bg-slate-700/70 hover:bg-slate-600 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    className="p-2 rounded-[8px] bg-[#fce5df] hover:bg-[#f29ebd]/50 text-[#00522d] disabled:opacity-30 cursor-pointer"
                   >
                     <ChevronDown className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Card Body: Address, Benchmark */}
-              <div className="p-4 space-y-2.5">
-                <div>
-                  <div className="flex items-start gap-1.5">
-                    <MapPin className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold text-slate-100 leading-snug">
-                        {pkg.areaOrStreet || pkg.fullAddress}
-                      </p>
-                      <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                        {pkg.fullAddress}
-                      </p>
-                    </div>
+              {/* Card Body */}
+              <div className="p-4 sm:p-5 space-y-3">
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-[#db3c8a] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-[#00522d]">
+                      {pkg.areaOrStreet}
+                    </p>
+                    <p className="text-xs text-[#00522d]/90 leading-relaxed mt-0.5 max-w-[60ch]">
+                      {pkg.fullAddress}
+                    </p>
                   </div>
-
-                  {pkg.benchmark && (
-                    <div className="mt-2 text-xs bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-amber-200 flex items-start gap-1.5">
-                      <span className="font-bold shrink-0">💡 Patokan:</span>
-                      <span>{pkg.benchmark}</span>
-                    </div>
-                  )}
-
-                  {pkg.statusNotes && (
-                    <div className="mt-2 text-xs bg-slate-900 rounded-lg p-2 text-slate-300 border border-slate-700 flex items-start gap-1.5">
-                      <span className="font-semibold text-rose-400 shrink-0">Catatan:</span>
-                      <span>{pkg.statusNotes}</span>
-                    </div>
-                  )}
                 </div>
 
-                {/* Fast Action Buttons: Google Maps, WhatsApp, Phone */}
+                {pkg.benchmark && (
+                  <div className="text-xs bg-[#fce5df] p-2.5 rounded-[10px] text-[#00522d]">
+                    <strong className="text-[#db3c8a]">Patokan:</strong> {pkg.benchmark}
+                  </div>
+                )}
+
+                {/* Actions */}
                 <div className="grid grid-cols-3 gap-2 pt-1">
                   <a
                     href={getSingleNavigationUrl(pkg.lat, pkg.lng, pkg.fullAddress)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow-md shadow-blue-600/30 transition text-center"
+                    className="flex items-center justify-center gap-1.5 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-bold text-xs py-2.5 px-3 rounded-[10px] transition text-center"
                   >
                     <Navigation className="w-4 h-4" />
                     <span>Maps</span>
@@ -250,23 +227,23 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
                   <button
                     onClick={() => handleOpenWhatsApp(pkg)}
-                    className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow-md shadow-emerald-600/30 transition cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] font-bold text-xs py-2.5 px-3 rounded-[10px] transition cursor-pointer"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-4 h-4 text-[#00522d]" />
                     <span>Chat WA</span>
                   </button>
 
                   <a
                     href={`tel:${pkg.recipientPhone}`}
-                    className="flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-100 font-bold text-xs py-2.5 px-3 rounded-xl transition text-center"
+                    className="flex items-center justify-center gap-1.5 bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] font-bold text-xs py-2.5 px-3 rounded-[10px] transition text-center"
                   >
-                    <Phone className="w-4 h-4" />
+                    <Phone className="w-4 h-4 text-[#00522d]" />
                     <span>Telp</span>
                   </a>
                 </div>
 
-                {/* Status Toggle Bar */}
-                <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between gap-1.5 text-xs">
+                {/* Status Toggle */}
+                <div className="pt-2 border-t border-[#fce5df] flex items-center justify-between gap-2 text-xs">
                   <button
                     onClick={() =>
                       onUpdateStatus(
@@ -274,13 +251,13 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                         pkg.status === 'delivered' ? 'pending' : 'delivered'
                       )
                     }
-                    className={`flex-1 py-1.5 px-2 rounded-lg font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                    className={`flex-1 py-2 px-3 rounded-[10px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                       pkg.status === 'delivered'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-slate-700/60 hover:bg-emerald-950/60 text-slate-300 hover:text-emerald-300'
+                        ? 'bg-[#00522d] text-white'
+                        : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/50'
                     }`}
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <CheckCircle2 className="w-4 h-4" />
                     <span>{pkg.status === 'delivered' ? 'Sudah Terkirim' : 'Tandai Terkirim'}</span>
                   </button>
 
@@ -291,14 +268,13 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                         onUpdateStatus(pkg.id, 'rescheduled', note);
                       }
                     }}
-                    className={`py-1.5 px-2.5 rounded-lg font-medium flex items-center justify-center gap-1 transition cursor-pointer ${
+                    className={`py-2 px-3 rounded-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
                       pkg.status === 'rescheduled'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-slate-700/60 hover:bg-amber-950/60 text-slate-300 hover:text-amber-300'
+                        ? 'bg-[#db3c8a] text-white'
+                        : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/50'
                     }`}
-                    title="Rumah Kosong / Tunda Pengantaran"
                   >
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-4 h-4" />
                     <span>Kosong</span>
                   </button>
 
@@ -309,14 +285,13 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                         onUpdateStatus(pkg.id, 'failed', reason);
                       }
                     }}
-                    className={`py-1.5 px-2 rounded-lg font-medium flex items-center justify-center gap-1 transition cursor-pointer ${
+                    className={`py-2 px-3 rounded-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
                       pkg.status === 'failed'
-                        ? 'bg-rose-600 text-white'
-                        : 'bg-slate-700/60 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300'
+                        ? 'bg-[#db3c8a] text-white'
+                        : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/50'
                     }`}
-                    title="Gagal / Retur"
                   >
-                    <XCircle className="w-3.5 h-3.5" />
+                    <XCircle className="w-4 h-4" />
                     <span>Gagal</span>
                   </button>
                 </div>

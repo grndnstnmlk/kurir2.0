@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Package,
-  MapPin,
+  Menu,
+  Zap,
+  Navigation,
   ListOrdered,
-  Scan,
+  MapPin,
   DollarSign,
-  Settings,
   Calendar,
-  Layers,
-  Wifi,
-  Battery,
+  Settings,
+  Scan,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -29,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenScan,
 }) => {
-  const [time, setTime] = useState<string>('9:41');
+  const [time, setTime] = useState<string>('09:41');
 
   useEffect(() => {
     const updateTime = () => {
@@ -48,126 +47,96 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 bg-black/95 backdrop-blur-xl border-b border-zinc-900 select-none">
-      {/* iPhone 16 Pro Max Status Bar: 9:41, Dynamic Island, Signal, WiFi, Battery */}
-      <div className="px-6 pt-3 pb-1 flex items-center justify-between text-xs text-white font-semibold">
-        <span className="font-semibold text-[13px] tracking-tight">{time}</span>
+    <header className="sticky top-0 z-40 bg-[#fff8f6]/95 backdrop-blur-md border-b border-[#fce5df] select-none">
+      {/* Top Bar: Agence Foudre Dual 50px Circular Dots */}
+      <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        {/* Left Circular Menu Trigger (50px pink circle, #db3c8a) */}
+        <button
+          onClick={onOpenSettings}
+          title="Pengaturan & Profil Kurir"
+          className="w-[46px] h-[46px] rounded-full bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white flex items-center justify-center transition shadow-none border-none cursor-pointer"
+        >
+          <Menu className="w-5 h-5 stroke-[2.5]" />
+        </button>
 
-        {/* Dynamic Island Pill */}
-        <div className="w-28 h-6 bg-black rounded-full border border-zinc-800/80 flex items-center justify-center shadow-inner">
-          <div className="flex items-center gap-1.5 px-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-            <span className="text-[10px] font-mono text-zinc-300 font-bold uppercase tracking-wider">
-              J&T 2.0
-            </span>
-          </div>
-        </div>
-
-        {/* Right Status Icons */}
-        <div className="flex items-center gap-1.5 text-zinc-200">
-          <div className="flex items-end gap-0.5 h-3">
-            <span className="w-0.5 h-1.5 bg-white rounded-full"></span>
-            <span className="w-0.5 h-2 bg-white rounded-full"></span>
-            <span className="w-0.5 h-2.5 bg-white rounded-full"></span>
-            <span className="w-0.5 h-3 bg-white rounded-full"></span>
-          </div>
-          <Wifi className="w-3.5 h-3.5" />
-          <Battery className="w-4 h-4 text-white fill-white" />
-        </div>
-      </div>
-
-      {/* Refero Top Action Bar: Title & High-Contrast "Done" / "+ Scan" Action */}
-      <div className="px-5 py-2.5 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
-            <span>Kurir 2.0</span>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-zinc-800 text-amber-400 border border-zinc-700">
-              iPhone 16 Pro Max
-            </span>
-          </h2>
-          <p className="text-[11px] text-zinc-400 font-medium truncate max-w-[200px]">
-            {courierName} • {dropPointName}
+        {/* Center Masthead Typography */}
+        <div className="text-center">
+          <p className="text-[11px] font-bold tracking-widest uppercase text-[#00522d] font-clash">
+            J&T EXPRESS • {time}
+          </p>
+          <h1 className="text-2xl font-black tracking-tight text-[#db3c8a] font-beni leading-none uppercase">
+            KURIR 2.0
+          </h1>
+          <p className="text-[10px] text-[#00522d]/70 font-clash font-medium truncate max-w-[170px] sm:max-w-xs mx-auto">
+            {courierName} — {dropPointName}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onOpenScan}
-            className="bg-white hover:bg-zinc-200 active:scale-95 text-black font-black text-xs px-3.5 py-1.5 rounded-full shadow-lg transition cursor-pointer"
-          >
-            + Scan
-          </button>
-
-          <button
-            onClick={onOpenSettings}
-            className="p-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 active:scale-95 transition cursor-pointer"
-            title="Pengaturan"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Right Circular Brand Mark (50px pink circle with lightning glyph) */}
+        <button
+          onClick={onOpenScan}
+          title="+ Scan Resi Baru"
+          className="w-[46px] h-[46px] rounded-full bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white flex items-center justify-center transition shadow-none border-none cursor-pointer"
+        >
+          <Zap className="w-5 h-5 fill-white stroke-none" />
+        </button>
       </div>
 
-      {/* Segmented Tab Bar for iPhone */}
-      <nav className="flex items-center justify-between px-3 py-1 bg-black border-t border-zinc-900/90 text-xs overflow-x-auto scrollbar-none">
+      {/* Editorial Pill Navigation Strip */}
+      <nav className="flex items-center justify-center gap-1.5 px-3 py-2 border-t border-[#fce5df] overflow-x-auto scrollbar-none text-xs font-clash">
         <button
           onClick={() => setActiveTab('deck')}
-          className={`flex-1 min-w-[70px] py-1.5 px-2 flex items-center justify-center gap-1.5 font-bold rounded-xl transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'deck'
-              ? 'bg-white text-black shadow-md'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/40'
           }`}
         >
-          <Layers className="w-3.5 h-3.5" />
-          <span className="text-xs">Fokus</span>
+          Fokus
         </button>
 
         <button
           onClick={() => setActiveTab('route')}
-          className={`flex-1 min-w-[70px] py-1.5 px-2 flex items-center justify-center gap-1.5 font-bold rounded-xl transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'route'
-              ? 'bg-white text-black shadow-md'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/40'
           }`}
         >
-          <ListOrdered className="w-3.5 h-3.5" />
-          <span className="text-xs">Daftar</span>
+          Daftar Rute
         </button>
 
         <button
           onClick={() => setActiveTab('map')}
-          className={`flex-1 min-w-[70px] py-1.5 px-2 flex items-center justify-center gap-1.5 font-bold rounded-xl transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'map'
-              ? 'bg-white text-black shadow-md'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/40'
           }`}
         >
-          <MapPin className="w-3.5 h-3.5" />
-          <span className="text-xs">Peta</span>
+          Peta
         </button>
 
         <button
           onClick={() => setActiveTab('cod')}
-          className={`flex-1 min-w-[70px] py-1.5 px-2 flex items-center justify-center gap-1.5 font-bold rounded-xl transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'cod'
-              ? 'bg-amber-400 text-black shadow-md'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/40'
           }`}
         >
-          <DollarSign className="w-3.5 h-3.5" />
-          <span className="text-xs">COD</span>
+          Rekap COD
         </button>
 
         <button
           onClick={() => setActiveTab('history')}
-          className={`flex-1 min-w-[70px] py-1.5 px-2 flex items-center justify-center gap-1.5 font-bold rounded-xl transition cursor-pointer ${
+          className={`px-4 py-1.5 rounded-full font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'history'
-              ? 'bg-white text-black shadow-md'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d] hover:bg-[#f29ebd]/40'
           }`}
         >
-          <Calendar className="w-3.5 h-3.5" />
-          <span className="text-xs">Riwayat</span>
+          Riwayat
         </button>
       </nav>
     </header>

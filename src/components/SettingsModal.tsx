@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, MapPin, Check, X, Compass } from 'lucide-react';
+import { Settings, MapPin, X, Compass } from 'lucide-react';
 import type { CourierSettings, RouteStrategy } from '../types';
 
 interface SettingsModalProps {
@@ -41,7 +41,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setDropPointLat(pos.coords.latitude);
         setDropPointLng(pos.coords.longitude);
         setIsGettingGps(false);
-        alert('Berhasil! Titik Drop Point telah diperbarui menggunakan koordinat GPS Anda saat ini.');
+        alert('Berhasil! Titik Drop Point telah diperbarui menggunakan koordinat GPS Anda.');
       },
       (err) => {
         setIsGettingGps(false);
@@ -66,44 +66,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
-        <div className="px-5 py-3.5 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-red-600/30 text-red-400 border border-red-500/30 flex items-center justify-center">
-              <Settings className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-bold text-sm text-white">Pengaturan Profil & Drop Point</h2>
-              <p className="text-[11px] text-slate-400">Atur gudang awal berangkat, nama kurir, & pesan WA</p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto font-clash">
+      <div className="bg-[#fff8f6] border border-[#fce5df] rounded-[24px] w-full max-w-lg shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col text-[#00522d]">
+        <div className="px-6 py-4 bg-[#fce5df]/50 border-b border-[#fce5df] flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-base text-[#00522d]">Pengaturan Profil & Drop Point</h2>
+            <p className="text-xs text-[#00522d]/70">Atur profil kurir, gudang berangkat, dan template WA</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-[#fce5df] text-[#00522d] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
+        <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-4 text-xs">
           <div>
-            <label className="block font-bold text-slate-300 mb-1">
-              Nama Kurir / Sprinter:
-            </label>
+            <label className="block font-bold text-[#00522d] mb-1">Nama Sprinter Kurir:</label>
             <input
               type="text"
               value={courierName}
               onChange={(e) => setCourierName(e.target.value)}
-              placeholder="Misal: Budi Santoso"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-bold focus:outline-none focus:border-red-500"
+              placeholder="Nama kurir"
+              className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] px-3 py-2 text-[#00522d] font-bold focus:outline-none focus:border-[#db3c8a]"
             />
           </div>
 
-          <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-3">
+          <div className="bg-[#fce5df]/50 p-4 rounded-[16px] border border-[#fce5df] space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-red-400" />
+              <span className="font-bold text-[#00522d] flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-[#db3c8a]" />
                 Drop Point / Gudang Asal
               </span>
 
@@ -111,86 +104,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="button"
                 onClick={handleGetCurrentGps}
                 disabled={isGettingGps}
-                className="flex items-center gap-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/40 px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer"
+                className="flex items-center gap-1 bg-[#db3c8a] hover:bg-[#c22e77] text-white px-3 py-1 rounded-full text-[11px] font-bold transition cursor-pointer"
               >
                 <Compass className={`w-3.5 h-3.5 ${isGettingGps ? 'animate-spin' : ''}`} />
-                <span>Gunakan GPS Sekarang</span>
+                <span>Gunakan GPS</span>
               </button>
             </div>
 
             <div>
-              <label className="block text-slate-400 mb-1">Nama Drop Point:</label>
+              <label className="block text-[#00522d] mb-0.5">Nama Drop Point:</label>
               <input
                 type="text"
                 value={dropPointName}
                 onChange={(e) => setDropPointName(e.target.value)}
-                placeholder="Misal: J&T DP Menteng"
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 focus:outline-none"
+                className="w-full bg-[#fff8f6] border border-[#fce5df] rounded-[8px] px-3 py-1.5 text-[#00522d] focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-slate-400 mb-1">Alamat Drop Point:</label>
+              <label className="block text-[#00522d] mb-0.5">Alamat Drop Point:</label>
               <input
                 type="text"
                 value={dropPointAddress}
                 onChange={(e) => setDropPointAddress(e.target.value)}
-                placeholder="Alamat kantor / gudang J&T Anda"
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 focus:outline-none"
+                className="w-full bg-[#fff8f6] border border-[#fce5df] rounded-[8px] px-3 py-1.5 text-[#00522d] focus:outline-none"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div>
-                <label className="text-slate-400 block mb-0.5">Latitude:</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={dropPointLat}
-                  onChange={(e) => setDropPointLat(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 font-mono text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 block mb-0.5">Longitude:</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={dropPointLng}
-                  onChange={(e) => setDropPointLng(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 font-mono text-slate-200"
-                />
-              </div>
             </div>
           </div>
 
           <div>
-            <label className="block font-bold text-slate-300 mb-1">
-              Template Pesan WhatsApp Otomatis:
-            </label>
-            <p className="text-[10px] text-slate-400 mb-1">
-              Variabel yang bisa digunakan: <code className="text-red-400 font-mono">{"{NAMA}"}</code>, <code className="text-red-400 font-mono">{"{RESI}"}</code>, <code className="text-red-400 font-mono">{"{INFO_COD}"}</code>, <code className="text-red-400 font-mono">{"{ALAMAT}"}</code>
-            </p>
+            <label className="block font-bold text-[#00522d] mb-1">Template WhatsApp:</label>
             <textarea
               rows={4}
               value={customWhatsAppTemplate}
               onChange={(e) => setCustomWhatsAppTemplate(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-slate-100 font-mono text-xs focus:outline-none focus:border-red-500"
+              className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] p-3 text-[#00522d] font-mono text-xs focus:outline-none focus:border-[#db3c8a]"
             />
           </div>
 
-          <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+          <div className="pt-2 border-t border-[#fce5df] flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => {
-                if (confirm('Muat ulang 6 paket contoh realistis J&T untuk simulasi?')) {
+                if (confirm('Muat ulang 6 paket contoh realistis J&T?')) {
                   onLoadSampleData();
                   onClose();
                 }
               }}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition cursor-pointer"
+              className="px-3 py-2 rounded-[8px] bg-[#fce5df] text-[#00522d] font-bold transition cursor-pointer"
             >
-              Muat 6 Paket Contoh J&T
+              Muat 6 Paket Contoh
             </button>
 
             <button
@@ -201,9 +164,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClose();
                 }
               }}
-              className="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/50 font-semibold transition cursor-pointer"
+              className="px-3 py-2 rounded-[8px] text-[#db3c8a] font-bold hover:bg-[#fce5df] transition cursor-pointer"
             >
-              Hapus Semua Data
+              Hapus Data
             </button>
           </div>
 
@@ -211,16 +174,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer"
+              className="flex-1 py-3 rounded-[10px] bg-[#fce5df] text-[#00522d] font-bold transition cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="flex-2 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-red-600/30 transition cursor-pointer"
+              className="flex-2 py-3 rounded-[10px] bg-[#db3c8a] hover:bg-[#c22e77] text-white font-bold transition cursor-pointer"
             >
-              <Check className="w-4 h-4 stroke-[3]" />
-              <span>Simpan Pengaturan</span>
+              Simpan Pengaturan
             </button>
           </div>
         </form>

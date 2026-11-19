@@ -18,7 +18,6 @@ const STORAGE_KEY_SETTINGS = 'kurir2_settings_v1';
 const STORAGE_KEY_HISTORY = 'kurir2_history_v1';
 
 export function App() {
-  // Default to 'deck' (Tampilan iPhone 16 Pro Max ala Refero Design)
   const [activeTab, setActiveTab] = useState<'deck' | 'route' | 'map' | 'scan' | 'cod' | 'history'>('deck');
   const [isScanOpen, setIsScanOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -225,8 +224,8 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-amber-400 selection:text-black">
-      {/* Top Header with iOS Status Bar & Navigation */}
+    <div className="min-h-screen bg-[#fff8f6] text-[#00522d] flex flex-col font-clash selection:bg-[#db3c8a] selection:text-white">
+      {/* Editorial Agence Foudre Header */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -236,7 +235,7 @@ export function App() {
         onOpenScan={() => setIsScanOpen(true)}
       />
 
-      {/* Stats Bar shown on list/map/cod tabs to keep the Deck view completely clean like Refero */}
+      {/* Stats Bar shown on list/map/cod tabs */}
       {activeTab !== 'deck' && (
         <StatsBar
           packages={packages}
@@ -286,13 +285,13 @@ export function App() {
 
         {activeTab === 'scan' && (
           <div className="p-4 max-w-lg mx-auto space-y-4">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-center space-y-4">
-              <div className="w-16 h-16 bg-amber-400/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-400/30">
-                <Camera className="w-8 h-8 stroke-[2.5]" />
+            <div className="bg-[#fce5df]/60 border border-[#fce5df] rounded-[24px] p-6 text-center space-y-3">
+              <div className="w-16 h-16 bg-[#db3c8a] text-white rounded-full flex items-center justify-center mx-auto">
+                <Camera className="w-8 h-8 stroke-[2.2]" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-white">Scan Kamera / Tambah Paket</h3>
-                <p className="text-xs text-zinc-400 mt-1">
+                <h3 className="font-bold text-lg text-[#00522d]">Scan Kamera / Tambah Paket</h3>
+                <p className="text-xs text-[#00522d]/70 mt-1">
                   Ambil foto resi fisik J&T atau masukkan nomor dan alamat untuk diurutkan ke rute
                 </p>
               </div>
@@ -300,7 +299,7 @@ export function App() {
               <div className="pt-2 flex flex-col gap-2.5">
                 <button
                   onClick={() => setIsScanOpen(true)}
-                  className="w-full py-3.5 bg-white hover:bg-zinc-200 active:scale-95 text-black font-black text-sm rounded-2xl shadow-xl transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-bold text-sm rounded-full transition cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Camera className="w-4 h-4 stroke-[2.5]" />
                   <span>Buka Scanner Kamera Resi</span>
@@ -308,20 +307,11 @@ export function App() {
 
                 <button
                   onClick={handleLoadSampleData}
-                  className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-300 font-semibold text-xs rounded-2xl border border-zinc-700 transition cursor-pointer"
+                  className="w-full py-3 bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] font-bold text-xs rounded-full border border-[#fce5df] transition cursor-pointer"
                 >
                   Muat Ulang 6 Paket Contoh J&T
                 </button>
               </div>
-            </div>
-
-            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
-              <h4 className="font-bold text-xs text-zinc-300 uppercase tracking-wider mb-2">
-                Total Paket Terdaftar: {packages.length}
-              </h4>
-              <p className="text-xs text-zinc-400">
-                Semua data tersimpan otomatis di memori iPhone Anda (offline ready).
-              </p>
             </div>
           </div>
         )}

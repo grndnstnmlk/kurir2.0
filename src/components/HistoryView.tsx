@@ -4,14 +4,11 @@ import {
   Archive,
   ChevronDown,
   ChevronUp,
-  CheckCircle2,
-  DollarSign,
+  Check,
   Share2,
   Trash2,
   RotateCcw,
   Search,
-  Check,
-  Package,
 } from 'lucide-react';
 import type { DailyHistoryEntry, DeliveryPackage, CourierSettings } from '../types';
 
@@ -44,11 +41,6 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     }).format(val);
   };
 
-  // Hitung total sepanjang masa
-  const allTimePackages = history.reduce((sum, h) => sum + h.totalPackages, 0);
-  const allTimeDelivered = history.reduce((sum, h) => sum + h.deliveredCount, 0);
-  const allTimeCod = history.reduce((sum, h) => sum + h.codCollected, 0);
-
   const handleCopyDayReport = (entry: DailyHistoryEntry) => {
     const reportText = `📋 *ARSIP LAPORAN PENGANTARAN J&T*
 👤 Kurir: ${settings.courierName}
@@ -57,7 +49,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
 📦 *RINGKASAN:*
 • Total Paket: ${entry.totalPackages}
-• Terkirim: ${entry.deliveredCount} (${entry.totalPackages > 0 ? Math.round((entry.deliveredCount / entry.totalPackages) * 100) : 0}%)
+• Terkirim: ${entry.deliveredCount}
 • Pending/Kosong: ${entry.rescheduledCount}
 • Gagal/Retur: ${entry.failedCount}
 
@@ -84,7 +76,7 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
 
     if (notes !== null) {
       onArchiveToday(notes);
-      alert('Berhasil! Paket hari ini telah diarsipkan ke Riwayat dan daftar hari ini siap untuk besok.');
+      alert('Berhasil! Paket hari ini telah diarsipkan ke Riwayat.');
     }
   };
 
@@ -103,261 +95,110 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
   });
 
   return (
-    <div className="p-3 sm:p-5 max-w-4xl mx-auto space-y-5">
-      {/* Top Banner: Statistik Total & Tombol Tutup Hari */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-red-950/40 border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-red-400" />
-              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Buku Riwayat Harian Kurir
-              </p>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
-              {history.length} Hari Pengantaran Tercatat
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Total riwayat: <strong className="text-slate-200">{allTimePackages}</strong> paket (
-              <strong className="text-emerald-400">{allTimeDelivered}</strong> terkirim) • COD:{' '}
-              <strong className="text-amber-300">{formatRupiah(allTimeCod)}</strong>
-            </p>
-          </div>
-
-          <button
-            onClick={handlePromptArchive}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 text-white font-bold text-xs py-3 px-5 rounded-xl shadow-lg shadow-red-600/30 transition cursor-pointer"
-          >
-            <Archive className="w-4 h-4" />
-            <span>Arsipkan Hari Ini & Buka Hari Baru</span>
-          </button>
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5 font-clash bg-[#fff8f6]">
+      {/* Top Banner */}
+      <div className="bg-[#fce5df]/60 border border-[#fce5df] rounded-[20px] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#00522d]">
+            ARSIP BUKU HARIAN
+          </p>
+          <h2 className="text-4xl font-black font-beni text-[#db3c8a] mt-1 leading-none uppercase">
+            {history.length} HARI TERCATAT
+          </h2>
+          <p className="text-xs text-[#00522d] mt-1">
+            Paket aktif hari ini: <strong>{currentPackages.length} paket</strong>.
+          </p>
         </div>
 
-        {/* Status Paket Aktif Hari Ini */}
-        <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <span>
-            Paket aktif hari ini:{' '}
-            <strong className="text-slate-200">{currentPackages.length} paket</strong> (
-            <strong className="text-emerald-400">
-              {currentPackages.filter((p) => p.status === 'delivered').length} terkirim
-            </strong>
-            )
-          </span>
-          <span className="text-[11px] text-slate-500">
-            Arsipkan sore hari setelah setoran ke kasir selesai
-          </span>
-        </div>
+        <button
+          onClick={handlePromptArchive}
+          className="flex items-center justify-center gap-2 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-bold text-xs py-3 px-6 rounded-[10px] transition cursor-pointer"
+        >
+          <Archive className="w-4 h-4" />
+          <span>Arsipkan Hari Ini</span>
+        </button>
       </div>
 
-      {/* Pencarian Riwayat */}
+      {/* Search Input */}
       <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-[#00522d]/60 absolute left-4 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Cari riwayat tanggal, nomor resi JX/JP, atau nama customer..."
-          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-red-500"
+          placeholder="Cari tanggal, nomor resi, atau nama customer..."
+          className="w-full bg-[#fce5df]/40 border border-[#fce5df] rounded-[10px] pl-11 pr-4 py-2.5 text-xs text-[#00522d] placeholder-[#00522d]/60 focus:outline-none focus:border-[#db3c8a]"
         />
       </div>
 
-      {/* Daftar Kartu Riwayat Harian */}
+      {/* History Cards */}
       <div className="space-y-3">
         {filteredHistory.map((entry) => {
           const isExpanded = expandedId === entry.id;
-          const successRate =
-            entry.totalPackages > 0
-              ? Math.round((entry.deliveredCount / entry.totalPackages) * 100)
-              : 0;
 
           return (
             <div
               key={entry.id}
-              className="bg-slate-800/90 border border-slate-700/80 rounded-2xl overflow-hidden shadow-lg transition"
+              className="bg-[#fff8f6] border border-[#fce5df] rounded-[20px] overflow-hidden"
             >
-              {/* Card Header: Tanggal & Ringkasan */}
               <div
                 onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-700/30 transition"
+                className="p-5 flex items-center justify-between cursor-pointer hover:bg-[#fce5df]/40 transition"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-[10px] font-bold text-red-400 leading-none">
-                      {new Date(entry.date).toLocaleDateString('id-ID', { month: 'short' })}
-                    </span>
-                    <span className="text-sm font-black text-white leading-none mt-0.5">
-                      {new Date(entry.date).getDate()}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                      <span>{entry.displayDate}</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        {successRate}% Sukses
-                      </span>
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {entry.totalPackages} Paket ({entry.deliveredCount} Terkirim •{' '}
-                      {entry.failedCount + entry.rescheduledCount} Kendala)
-                    </p>
-                    {entry.notes && (
-                      <p className="text-[11px] text-slate-400 italic mt-1 line-clamp-1">
-                        "{entry.notes}"
-                      </p>
-                    )}
-                  </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#00522d]">{entry.displayDate}</h3>
+                  <p className="text-xs text-[#00522d]/80 mt-0.5">
+                    {entry.totalPackages} Paket • {entry.deliveredCount} Terkirim • Setoran COD:{' '}
+                    <strong className="text-[#db3c8a]">{formatRupiah(entry.codCollected)}</strong>
+                  </p>
                 </div>
 
-                {/* Right Side: Total COD & Expand Chevron */}
-                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-700/50">
-                  <div className="text-left sm:text-right">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold block">
-                      Setoran COD:
-                    </span>
-                    <span className="text-sm font-black text-amber-300">
-                      {formatRupiah(entry.codCollected)}
-                    </span>
-                  </div>
-
-                  <div className="p-1.5 rounded-lg bg-slate-700/60 text-slate-300">
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
-                  </div>
+                <div className="p-2 rounded-full bg-[#fce5df] text-[#00522d]">
+                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </div>
               </div>
 
-              {/* Expandable Detail: Daftar Paket Hari Tersebut */}
               {isExpanded && (
-                <div className="border-t border-slate-700/80 bg-slate-900/90 p-4 space-y-4">
-                  {/* Action Bar Hari Tersebut */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800 text-xs">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopyDayReport(entry);
-                        }}
-                        className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition cursor-pointer"
-                      >
-                        {copiedId === entry.id ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                            <span>Laporan Tersalin!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Share2 className="w-3.5 h-3.5" />
-                            <span>Salin Laporan WA</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (
-                            confirm(
-                              'Muat kembali paket dari hari ini ke daftar aktif? (Paket hari ini saat ini akan digantikan).'
-                            )
-                          ) {
-                            onRestoreHistory(entry);
-                          }
-                        }}
-                        className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Buka ke Hari Aktif</span>
-                      </button>
-                    </div>
-
+                <div className="p-5 border-t border-[#fce5df] bg-[#fce5df]/20 space-y-3 text-xs">
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`Hapus permanen riwayat tanggal ${entry.displayDate}?`)) {
-                          onDeleteHistory(entry.id);
-                        }
-                      }}
-                      className="flex items-center gap-1 text-rose-400 hover:text-rose-300 font-semibold px-2 py-1 rounded transition cursor-pointer"
+                      onClick={() => handleCopyDayReport(entry)}
+                      className="px-3 py-1.5 rounded-[8px] bg-[#db3c8a] text-white font-bold transition cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Hapus Arsip Ini</span>
+                      {copiedId === entry.id ? 'Tersalin!' : 'Salin Laporan WA'}
+                    </button>
+                    <button
+                      onClick={() => onRestoreHistory(entry)}
+                      className="px-3 py-1.5 rounded-[8px] bg-[#fce5df] text-[#00522d] font-bold border border-[#fce5df] transition cursor-pointer"
+                    >
+                      Buka ke Hari Aktif
+                    </button>
+                    <button
+                      onClick={() => onDeleteHistory(entry.id)}
+                      className="px-3 py-1.5 rounded-[8px] text-[#db3c8a] font-bold hover:bg-[#fce5df] transition cursor-pointer ml-auto"
+                    >
+                      Hapus
                     </button>
                   </div>
 
-                  {/* List of packages from that day */}
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Rincian Paket ({entry.packages.length}):
-                    </p>
-
-                    <div className="divide-y divide-slate-800 max-h-72 overflow-y-auto">
-                      {entry.packages.map((pkg, idx) => (
-                        <div
-                          key={pkg.id || idx}
-                          className="py-2.5 flex items-center justify-between gap-3 text-xs"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-slate-300">
-                                {pkg.trackingNumber}
-                              </span>
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                  pkg.status === 'delivered'
-                                    ? 'bg-emerald-950 text-emerald-400'
-                                    : 'bg-rose-950 text-rose-400'
-                                }`}
-                              >
-                                {pkg.status === 'delivered' ? 'Terkirim' : 'Kendala'}
-                              </span>
-                            </div>
-                            <p className="font-semibold text-slate-100 mt-0.5">
-                              {pkg.recipientName}
-                            </p>
-                            <p className="text-[11px] text-slate-400 truncate max-w-sm">
-                              {pkg.fullAddress}
-                            </p>
-                          </div>
-
-                          <div className="text-right">
-                            {pkg.isCod ? (
-                              <span className="font-mono font-black text-amber-300 block">
-                                {formatRupiah(pkg.codAmount)}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-blue-300 font-semibold block">
-                                Non-COD
-                              </span>
-                            )}
-                            <span className="text-[10px] text-slate-500">Stop #{pkg.orderIndex}</span>
-                          </div>
+                  <div className="divide-y divide-[#fce5df] pt-2">
+                    {entry.packages.map((pkg, idx) => (
+                      <div key={pkg.id || idx} className="py-2 flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-[#00522d]">{pkg.recipientName}</p>
+                          <p className="text-[11px] text-[#00522d]/70">{pkg.trackingNumber} • {pkg.areaOrStreet}</p>
                         </div>
-                      ))}
-                    </div>
+                        <span className="font-bold text-[#db3c8a]">
+                          {pkg.isCod ? formatRupiah(pkg.codAmount) : 'Lunas'}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
           );
         })}
-
-        {filteredHistory.length === 0 && (
-          <div className="text-center py-12 px-4 bg-slate-900/60 rounded-2xl border border-slate-800">
-            <Calendar className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
-            <h3 className="text-base font-bold text-slate-200">
-              {searchQuery ? 'Tidak Ada Riwayat yang Cocok' : 'Belum Ada Arsip Riwayat Harian'}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              Setelah selesai mengantar paket hari ini dan setor COD ke kasir, klik tombol{' '}
-              <strong className="text-red-400">"Arsipkan Hari Ini"</strong> di atas untuk menyimpan
-              catatan hari ini secara permanen.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

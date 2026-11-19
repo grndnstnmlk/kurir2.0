@@ -5,15 +5,11 @@ import {
   Phone,
   CheckCircle2,
   Clock,
-  XCircle,
   MapPin,
   DollarSign,
   Package as PackageIcon,
-  ChevronLeft,
-  ChevronRight,
-  Share2,
-  ExternalLink,
   Check,
+  Zap,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus } from '../types';
 import { getSingleNavigationUrl } from '../utils/routeOptimizer';
@@ -38,17 +34,19 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   if (packages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] px-6 text-center text-white">
-        <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-amber-400">
+      <div className="flex flex-col items-center justify-center min-h-[500px] px-6 text-center text-[#00522d]">
+        <div className="w-20 h-20 rounded-full bg-[#fce5df] flex items-center justify-center mb-5 text-[#db3c8a]">
           <PackageIcon className="w-10 h-10" />
         </div>
-        <h2 className="text-2xl font-black tracking-tight">Tidak Ada Paket Hari Ini</h2>
-        <p className="text-sm text-zinc-400 mt-2 max-w-xs">
-          Semua paket telah diarsipkan atau belum ada paket yang discan.
+        <h2 className="text-4xl font-black font-beni text-[#db3c8a] uppercase leading-none">
+          SEMUA SELESAI
+        </h2>
+        <p className="text-sm font-clash text-[#00522d] mt-2 max-w-xs mx-auto">
+          Tidak ada paket aktif untuk diantar saat ini.
         </p>
         <button
           onClick={onOpenScan}
-          className="mt-6 bg-white text-black font-bold text-sm px-6 py-3.5 rounded-2xl shadow-xl active:scale-95 transition"
+          className="mt-6 bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-bold text-xs px-6 py-3.5 rounded-full transition cursor-pointer"
         >
           + Scan Resi Paket Baru
         </button>
@@ -89,7 +87,6 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  // Touch Swipe Handlers for iPhone Gestures
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
   };
@@ -112,198 +109,156 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   return (
     <div
-      className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] w-full max-w-md mx-auto px-5 py-2 select-none"
+      className="flex flex-col justify-between min-h-[calc(100vh-140px)] w-full max-w-xl mx-auto px-5 py-6 select-none bg-[#fff8f6]"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Top Floating Badge Bar */}
-      <div className="w-full flex items-center justify-between py-2 text-xs text-zinc-400 font-semibold">
-        <span className="tracking-wider uppercase text-[11px] font-bold text-zinc-300">
-          Antaran {safeIndex + 1} dari {packages.length}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isDelivered ? 'bg-emerald-400' : isProblem ? 'bg-rose-500' : 'bg-amber-400 animate-pulse'
-            }`}
-          />
-          <span className="text-zinc-200">
-            {isDelivered ? 'Terkirim' : isProblem ? 'Kendala' : 'Sedang Menuju'}
+      {/* 1. Category / Section Label (Clash Grotesk 12-14px in #00522d) */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#db3c8a]"></span>
+          <span className="text-xs font-bold uppercase tracking-wider text-[#00522d] font-clash">
+            URUTAN JALAN {safeIndex + 1} DARI {packages.length}
           </span>
         </div>
+
+        {/* Status Pill Badge */}
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-bold font-clash ${
+            isDelivered
+              ? 'bg-[#00522d] text-[#fff8f6]'
+              : isProblem
+              ? 'bg-[#db3c8a] text-white'
+              : 'bg-[#fce5df] text-[#00522d]'
+          }`}
+        >
+          {isDelivered ? 'Terkirim' : isProblem ? 'Ada Kendala' : 'Belum Diantar'}
+        </span>
       </div>
 
-      {/* Main Hero Card (Refero Styled High-Radius White/Off-White Card) */}
-      <div className="relative w-full aspect-[4/4.2] sm:aspect-[4/4] bg-[#f2f2f4] text-zinc-900 rounded-[32px] p-6 shadow-2xl flex flex-col justify-between overflow-hidden border border-white/20 transition-all duration-300">
-        {/* Confetti or Status Dots */}
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
-
-        {/* Top Card Row: Badge / Resi & Squircle Action Icon */}
-        <div className="flex items-start justify-between z-10">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 text-white text-[11px] font-bold shadow-sm">
-              <span>J&T EXPRESS</span>
-              <span>•</span>
-              <span className="font-mono text-amber-300">{currentPkg.trackingNumber}</span>
-            </div>
-            {currentPkg.isCod ? (
-              <div className="block">
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-400/90 text-zinc-950 text-xs font-black shadow">
-                  <DollarSign className="w-3.5 h-3.5" />
-                  COD: {formatRupiah(currentPkg.codAmount)}
-                </span>
-              </div>
-            ) : (
-              <div className="block">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-bold">
-                  Sudah Lunas (Non-COD)
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Refero Squircle Yellow/Amber Icon Button */}
-          <div className="w-12 h-12 rounded-2xl bg-[#ffb703] text-zinc-950 flex items-center justify-center shadow-lg shadow-amber-500/30 ring-4 ring-amber-400/20">
-            <PackageIcon className="w-6 h-6 stroke-[2.2]" />
-          </div>
+      {/* 2. Faded Echo Headline + Massive Display Headline Block (Beni 900, Line Height 0.70) */}
+      <div className="relative my-3">
+        {/* Faded Echo Headline in #fce5df */}
+        <div className="font-beni font-black text-6xl sm:text-7xl uppercase text-[#fce5df] tracking-tight leading-none pointer-events-none select-none -mb-5 sm:-mb-7">
+          DELIVERY DISPATCH
         </div>
 
-        {/* Center Visual Showcase: Big Destination Area Name */}
-        <div className="my-auto py-3 text-center space-y-1.5 z-10">
-          <div className="inline-block px-3 py-0.5 rounded-full bg-zinc-200/80 text-zinc-600 font-mono text-[11px] font-bold tracking-widest uppercase">
-            {currentPkg.areaOrStreet.split(',')[0] || 'Alamat Tujuan'}
-          </div>
+        {/* Primary Display Headline in #db3c8a (Lipstick Magenta) */}
+        <h1 className="font-beni font-black text-7xl sm:text-8xl md:text-9xl uppercase text-[#db3c8a] tracking-tight leading-[0.72] z-10 relative">
+          STOP #{String(currentPkg.orderIndex).padStart(2, '0')}
+        </h1>
+      </div>
 
-          <h2 className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight leading-tight px-2">
+      {/* 3. Editorial Badges & Subtitle */}
+      <div className="flex flex-wrap items-center gap-2 my-2">
+        <span className="px-3.5 py-1 rounded-full text-xs font-bold font-clash bg-[#fce5df] text-[#00522d]">
+          {currentPkg.trackingNumber}
+        </span>
+
+        {currentPkg.isCod ? (
+          <span className="px-3.5 py-1 rounded-full text-xs font-bold font-clash bg-[#db3c8a] text-white flex items-center gap-1">
+            <DollarSign className="w-3.5 h-3.5" />
+            COD: {formatRupiah(currentPkg.codAmount)}
+          </span>
+        ) : (
+          <span className="px-3.5 py-1 rounded-full text-xs font-bold font-clash bg-[#fce5df] text-[#00522d]">
+            Non-COD (Lunas)
+          </span>
+        )}
+      </div>
+
+      {/* 4. Recipient & Full Editorial Address (Clash Grotesk 400-500 in #00522d, max 60ch) */}
+      <div className="bg-[#fce5df]/60 border border-[#fce5df] rounded-[20px] p-5 my-3 space-y-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#db3c8a] font-clash">
+            Penerima Paket:
+          </p>
+          <h2 className="text-2xl font-bold font-clash text-[#00522d] leading-snug">
             {currentPkg.recipientName}
           </h2>
-
-          <p className="text-xs text-zinc-600 font-mono flex items-center justify-center gap-1">
-            <Phone className="w-3 h-3 text-zinc-400" />
-            <span>{currentPkg.recipientPhone}</span>
+          <p className="text-xs font-mono text-[#00522d]/80 mt-0.5">
+            📞 {currentPkg.recipientPhone}
           </p>
         </div>
 
-        {/* Bottom Card Info: Status & Location Pin */}
-        <div className="pt-3 border-t border-zinc-200/80 flex items-center justify-between text-xs font-medium text-zinc-600 z-10">
-          <div className="flex items-center gap-1.5 truncate max-w-[200px]">
-            <MapPin className="w-3.5 h-3.5 text-red-600 shrink-0" />
-            <span className="truncate">{currentPkg.fullAddress}</span>
-          </div>
-
-          <button
-            onClick={() =>
-              onUpdateStatus(
-                currentPkg.id,
-                currentPkg.status === 'delivered' ? 'pending' : 'delivered'
-              )
-            }
-            className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition active:scale-95 cursor-pointer ${
-              isDelivered
-                ? 'bg-emerald-600 text-white shadow'
-                : 'bg-zinc-900 text-white hover:bg-zinc-800'
-            }`}
-          >
-            {isDelivered ? (
-              <>
-                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>Terkirim</span>
-              </>
-            ) : (
-              <span>Tandai Selesai</span>
-            )}
-          </button>
+        <div className="pt-2 border-t border-[#fce5df]">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#00522d] font-clash flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5 text-[#db3c8a]" />
+            Alamat Pengantaran:
+          </p>
+          <p className="text-sm text-[#00522d] font-clash leading-relaxed mt-1 max-w-[60ch]">
+            {currentPkg.fullAddress}
+          </p>
+          {currentPkg.benchmark && (
+            <div className="mt-2 text-xs bg-[#fff8f6] p-2.5 rounded-[10px] text-[#00522d] border border-[#fce5df]">
+              <strong className="text-[#db3c8a]">Patokan:</strong> {currentPkg.benchmark}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Pagination Dashes (Refero Style Horizontal Dash Indicator) */}
-      <div className="flex items-center justify-center gap-1.5 my-4">
+      {/* 5. Horizontal Dotted / Dashes Pagination (Agence Foudre style) */}
+      <div className="flex items-center justify-center gap-2 my-2">
         {packages.map((_, idx) => {
           const isActive = idx === safeIndex;
           return (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+              className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
                 isActive
-                  ? 'w-9 bg-white shadow-sm'
-                  : 'w-4 bg-zinc-800 hover:bg-zinc-700'
+                  ? 'w-10 bg-[#db3c8a]'
+                  : 'w-4 bg-[#fce5df] hover:bg-[#f29ebd]'
               }`}
-              title={`Pindah ke Stop #${idx + 1}`}
+              title={`Buka Stop #${idx + 1}`}
             />
           );
         })}
       </div>
 
-      {/* Big Display Title: STOP 001 (Refero MODEL 001 typography) */}
-      <div className="text-center space-y-1 mb-2">
-        <h1 className="text-4xl sm:text-5xl font-black tracking-widest text-white uppercase font-sans">
-          STOP #{String(currentPkg.orderIndex).padStart(2, '0')}
-        </h1>
-        <p className="text-xs font-mono tracking-wider text-zinc-400">
-          {currentPkg.areaOrStreet || 'Area Pengantaran'}
-        </p>
-      </div>
-
-      {/* Address & Benchmark Description */}
-      <div className="text-center max-w-sm mb-5 space-y-1.5">
-        <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-          {currentPkg.fullAddress}
-        </p>
-        {currentPkg.benchmark && (
-          <div className="inline-block px-3 py-1 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-medium">
-            💡 <strong>Patokan:</strong> {currentPkg.benchmark}
-          </div>
-        )}
-      </div>
-
-      {/* Dual Pill Buttons (Refero Share & Get $15 Off layout) */}
-      <div className="grid grid-cols-2 gap-3 w-full mb-3">
+      {/* 6. Action Buttons: Lipstick Magenta (#db3c8a) & Blush Cream (#fce5df) */}
+      <div className="grid grid-cols-2 gap-3 pt-2">
         <button
           onClick={() => handleOpenWhatsApp(currentPkg)}
-          className="w-full bg-white hover:bg-zinc-200 active:scale-95 text-zinc-950 font-black text-sm py-3.5 px-4 rounded-2xl shadow-xl transition flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full bg-[#fce5df] hover:bg-[#f29ebd]/50 active:scale-95 text-[#00522d] font-clash font-bold text-sm py-3.5 px-4 rounded-[10px] transition flex items-center justify-center gap-2 cursor-pointer border border-[#fce5df]"
         >
-          <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600" />
-          <span>Chat WA</span>
+          <MessageCircle className="w-4 h-4 text-[#00522d]" />
+          <span>Chat WhatsApp</span>
         </button>
 
         <a
           href={getSingleNavigationUrl(currentPkg.lat, currentPkg.lng, currentPkg.fullAddress)}
           target="_blank"
           rel="noreferrer"
-          className="w-full bg-white hover:bg-zinc-200 active:scale-95 text-zinc-950 font-black text-sm py-3.5 px-4 rounded-2xl shadow-xl transition flex items-center justify-center gap-2 cursor-pointer text-center"
+          className="w-full bg-[#db3c8a] hover:bg-[#c22e77] active:scale-95 text-white font-clash font-bold text-sm py-3.5 px-4 rounded-[10px] transition flex items-center justify-center gap-2 cursor-pointer text-center"
         >
-          <Navigation className="w-4 h-4 text-blue-600 fill-blue-600" />
-          <span>Buka Maps</span>
+          <Navigation className="w-4 h-4 text-white" />
+          <span>Navigasi Maps</span>
         </a>
       </div>
 
-      {/* Bottom Tertiary Link (Refero "View in AR" style) */}
-      <div className="flex items-center justify-center gap-4 text-xs font-semibold text-zinc-400 pb-1">
+      {/* 7. Tertiary Actions (Editorial Links) */}
+      <div className="flex items-center justify-between text-xs font-clash font-semibold text-[#00522d] pt-4 border-t border-[#fce5df] mt-4">
+        <button
+          onClick={() =>
+            onUpdateStatus(
+              currentPkg.id,
+              currentPkg.status === 'delivered' ? 'pending' : 'delivered'
+            )
+          }
+          className="flex items-center gap-1.5 hover:text-[#db3c8a] transition cursor-pointer"
+        >
+          <Check className="w-4 h-4 text-[#db3c8a]" />
+          <span>{isDelivered ? 'Batal Terkirim' : 'Tandai Paket Terkirim'}</span>
+        </button>
+
         <button
           onClick={onOpenMapTab}
-          className="flex items-center gap-1.5 hover:text-white transition cursor-pointer"
+          className="hover:text-[#db3c8a] transition cursor-pointer underline decoration-[#db3c8a] underline-offset-4"
         >
-          <MapPin className="w-3.5 h-3.5 text-red-500" />
-          <span>Lihat di Peta Interaktif</span>
-        </button>
-        <span>•</span>
-        <button
-          onClick={() => {
-            const note = prompt('Alasan rumah kosong / tunda:', 'Pagar terkunci / tidak ada orang');
-            if (note !== null) {
-              onUpdateStatus(currentPkg.id, 'rescheduled', note);
-            }
-          }}
-          className="flex items-center gap-1 hover:text-amber-300 transition cursor-pointer"
-        >
-          <Clock className="w-3.5 h-3.5 text-amber-400" />
-          <span>Rumah Kosong</span>
+          Lihat di Peta Rute →
         </button>
       </div>
-
-      {/* iOS Home Indicator Bar */}
-      <div className="w-36 h-1 bg-white/40 rounded-full mx-auto mt-4 mb-1" />
     </div>
   );
 };
