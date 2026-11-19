@@ -36,25 +36,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [currentTime, setCurrentTime] = useState('9:41');
   const [isDarkMode, setIsDarkMode] = useState(true); // Default dark AMOLED matching Refero screenshot
-
-  // Live iOS Status Bar Clock
-  useEffect(() => {
-    const updateClock = () => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        })
-      );
-    };
-    updateClock();
-    const interval = setInterval(updateClock, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Keyboard navigation for desktop testing (Left/Right arrows)
   useEffect(() => {
@@ -168,35 +150,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           </div>
         )}
 
-        {/* 1. iOS Status Bar (9:41, Dynamic Island, Battery/Signal) */}
-        <div className="flex items-center justify-between pt-1 pb-2 text-xs font-semibold tracking-tight">
-          <span className="text-sm font-semibold pl-1">
-            {currentTime}
-          </span>
-
-          {/* Dynamic Island Pill representation */}
-          <div className="w-24 h-5 bg-black rounded-full border border-neutral-800 hidden sm:flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-[#111111]" />
-          </div>
-
-          <div className="flex items-center gap-1.5 pr-1">
-            {/* Cellular Signal Icon */}
-            <div className="flex items-end gap-0.5 h-3">
-              <span className={`w-0.5 h-1 rounded-sm ${isDarkMode ? 'bg-white' : 'bg-black'}`} />
-              <span className={`w-0.5 h-1.5 rounded-sm ${isDarkMode ? 'bg-white' : 'bg-black'}`} />
-              <span className={`w-0.5 h-2.5 rounded-sm ${isDarkMode ? 'bg-white' : 'bg-black'}`} />
-              <span className={`w-0.5 h-3 rounded-sm ${isDarkMode ? 'bg-white' : 'bg-black'}`} />
-            </div>
-            {/* WiFi Icon representation */}
-            <span className="text-[11px] leading-none">📶</span>
-            {/* Battery representation */}
-            <div className={`w-5 h-2.5 rounded-sm border p-0.5 flex items-center ${isDarkMode ? 'border-white' : 'border-black'}`}>
-              <div className={`w-full h-full rounded-2xs ${isDarkMode ? 'bg-white' : 'bg-black'}`} />
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Refero Navigation Bar: "Paket Antaran" & "Done" (Selesai) */}
+        {/* Refero Navigation Bar: "Paket Antaran" & "Done" (Selesai) */}
         <div className="flex items-center justify-between py-2 z-10">
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
