@@ -138,6 +138,37 @@ export function App() {
     }
   }, [history]);
 
+  // Special Admin URL access via hash (#admin) or query (?admin=1)
+  useEffect(() => {
+    const checkAdminRoute = () => {
+      const hash = window.location.hash.toLowerCase();
+      const search = window.location.search.toLowerCase();
+      if (
+        hash === '#admin' ||
+        search.includes('admin=true') ||
+        search.includes('admin=1') ||
+        search === '?admin'
+      ) {
+        setIsAdminOpen(true);
+      }
+    };
+
+    checkAdminRoute();
+    window.addEventListener('hashchange', checkAdminRoute);
+    window.addEventListener('popstate', checkAdminRoute);
+    return () => {
+      window.removeEventListener('hashchange', checkAdminRoute);
+      window.removeEventListener('popstate', checkAdminRoute);
+    };
+  }, []);
+
+  const handleCloseAdmin = () => {
+    setIsAdminOpen(false);
+    if (window.location.hash.toLowerCase() === '#admin') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
   const handleAddPackage = (newPkg: DeliveryPackage) => {
     const updated = [...packages, newPkg];
     const reordered = optimizeDeliveryRoute(
@@ -422,7 +453,6 @@ export function App() {
         onResetData={handleResetData}
         onLoadSampleData={handleLoadSampleData}
         onOpenSubscription={() => setIsSubscriptionOpen(true)}
-        onOpenAdminPanel={() => setIsAdminOpen(true)}
       />
 
       {/* Subscription & License Gatekeeper Modal */}
@@ -434,10 +464,10 @@ export function App() {
         adminWhatsAppNumber={settings.adminWhatsAppNumber}
       />
 
-      {/* Owner / Admin License Generator Modal */}
+      {/* Owner / Admin License Generator Modal (Protected with Password & Dedicated Link) */}
       <AdminLicenseModal
         isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
+        onClose={handleCloseAdmin}
       />
     </div>
   );

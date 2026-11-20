@@ -43,5 +43,12 @@ Aplikasi saat ini sudah aktif di komputer Anda:
    * **Salin Laporan WA:** Membuat teks rekapan tanggal tersebut untuk dikirim ke grup WhatsApp Drop Point.
    * **Buka ke Hari Aktif:** Bisa memulihkan kembali data hari tertentu jika ada paket yang perlu dicek ulang.
 
-7. **💾 Simpan Otomatis & Offline-Ready**
+7. 💾 **Simpan Otomatis & Offline-Ready**
    * Semua data tersimpan di memori HP (`LocalStorage`). Jika sinyal di pelosok gang hilang, data paket dan riwayat tetap aman dan tidak hilang.
+
+8. 🔐 **Panel Khusus Pemilik / Admin (Tersembunyi & Diproteksi Sandi)**
+   * **Tautan Akses Langsung:** Buka URL aplikasi dengan akhiran `#admin`, misalnya:
+     `https://grndnstnmlk.github.io/kurir2.0/#admin`
+   * **Kata Sandi Standar:** `admin331` (bisa diganti kapan saja dari dalam panel).
+   * **Fungsi:** Membuat kode aktivasi lisensi 30 hari (Rp 100.000), memantau daftar pengguna di database Supabase, dan membuat format pesan serah-terima kode untuk dikirim ke pembeli via WhatsApp.
+   * **Keamanan:** Tombol panel ini disembunyikan sepenuhnya dari menu pengaturan kurir biasa agar aman dan eksklusif untuk Anda sebagai pemilik aplikasi.

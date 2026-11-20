@@ -9,7 +9,6 @@ interface SettingsModalProps {
   onSaveSettings: (settings: CourierSettings) => void;
   onResetData: () => void;
   onLoadSampleData: () => void;
-  onOpenAdminPanel?: () => void;
   onOpenSubscription?: () => void;
 }
 
@@ -20,7 +19,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveSettings,
   onResetData,
   onLoadSampleData,
-  onOpenAdminPanel,
   onOpenSubscription,
 }) => {
   const [courierName, setCourierName] = useState(settings.courierName);
@@ -267,34 +265,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* Kelola Lisensi & Panel Admin */}
-          <div className="pt-3 border-t border-[#e4e4e7] flex items-center justify-between gap-2">
-            {onOpenSubscription && (
+          {/* Kelola Lisensi Pengguna */}
+          {onOpenSubscription && (
+            <div className="pt-3 border-t border-[#e4e4e7]">
               <button
                 type="button"
                 onClick={() => {
                   onClose();
                   onOpenSubscription();
                 }}
-                className="flex-1 py-2.5 rounded-full bg-[#ffffff] hover:bg-neutral-100 text-[#080808] font-bold text-xs border border-[#e4e4e7] cursor-pointer shadow-2xs active:scale-95 transition"
+                className="w-full py-2.5 rounded-full bg-[#ffffff] hover:bg-neutral-100 text-[#080808] font-bold text-xs border border-[#e4e4e7] cursor-pointer shadow-2xs active:scale-95 transition flex items-center justify-center gap-2"
               >
-                💎 Status Lisensi
+                <span>💎 Status Lisensi & Masa Aktif</span>
               </button>
-            )}
-
-            {onOpenAdminPanel && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenAdminPanel();
-                }}
-                className="flex-1 py-2.5 rounded-full bg-[#080808] hover:bg-neutral-800 text-white font-bold text-xs cursor-pointer shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5"
-              >
-                <span>🔐 Panel Admin</span>
-              </button>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="pt-2 flex items-center gap-2.5">
             <button
