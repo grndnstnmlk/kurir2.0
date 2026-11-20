@@ -31,7 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [defaultStrategy, setDefaultStrategy] = useState<RouteStrategy>(settings.defaultStrategy);
   const [customWhatsAppTemplate, setCustomWhatsAppTemplate] = useState(settings.customWhatsAppTemplate);
   const [adminWhatsAppNumber, setAdminWhatsAppNumber] = useState(
-    settings.adminWhatsAppNumber || '6281234567890'
+    settings.adminWhatsAppNumber || '6281295713923'
   );
   const [isGettingGps, setIsGettingGps] = useState(false);
 
@@ -68,7 +68,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       dropPointLng: Number(dropPointLng),
       defaultStrategy,
       customWhatsAppTemplate,
-      adminWhatsAppNumber: adminWhatsAppNumber.trim().replace(/\D/g, '') || '6281234567890',
+      adminWhatsAppNumber: adminWhatsAppNumber.trim().replace(/\D/g, '') || '6281295713923',
     });
     onClose();
   };
@@ -219,7 +219,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="Contoh: 6281234567890"
+              placeholder="Contoh: 6281295713923"
               value={adminWhatsAppNumber}
               onChange={(e) => setAdminWhatsAppNumber(e.target.value)}
               className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-4 py-2 text-[#080808] text-xs font-mono focus:outline-none"

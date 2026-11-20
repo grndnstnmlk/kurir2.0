@@ -7,7 +7,7 @@ export const DEFAULT_SETTINGS: CourierSettings = {
   dropPointLat: -7.1642,
   dropPointLng: 113.4819,
   defaultStrategy: 'optimal-tsp',
-  adminWhatsAppNumber: '6281234567890',
+  adminWhatsAppNumber: '6281295713923',
   customWhatsAppTemplate:
     'Halo Kak {NAMA}, saya kurir J&T Express mau mengantar paket No. Resi {RESI}.\n{INFO_COD}\nSaat ini saya menuju alamat {ALAMAT}. Apakah ada orang di rumah? Terima kasih! 🙏',
 };

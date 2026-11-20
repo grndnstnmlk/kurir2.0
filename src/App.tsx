@@ -52,6 +52,9 @@ export function App() {
           !parsed.dropPointName.includes('Menteng') &&
           !parsed.dropPointName.includes('Tlanakan / Branta')
         ) {
+          if (!parsed.adminWhatsAppNumber || parsed.adminWhatsAppNumber.includes('1234567890')) {
+            parsed.adminWhatsAppNumber = '6281295713923';
+          }
           return parsed;
         }
       }

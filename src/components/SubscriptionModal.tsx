@@ -34,7 +34,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   onClose,
   license,
   onLicenseUpdated,
-  adminWhatsAppNumber = '6281234567890', // Nomor WhatsApp Admin / Pemilik
+  adminWhatsAppNumber = '6281295713923', // Nomor WhatsApp Pemilik (6281295713923)
 }) => {
   const [inputCode, setInputCode] = useState('');
   const [loading, setLoading] = useState(false);
