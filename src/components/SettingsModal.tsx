@@ -133,6 +133,62 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="w-full bg-[#fafafa] border border-[#e4e4e7] rounded-full px-3.5 py-1.5 text-[#080808] focus:outline-none"
               />
             </div>
+
+            {/* Pilihan Cepat Drop Point J&T Pamekasan */}
+            <div className="pt-1">
+              <span className="text-[11px] text-[#696969] font-medium block mb-1">
+                Pilihan Cepat Gudang J&T Pamekasan:
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDropPointName('J&T Express Drop Point Pamekasan (Trunojoyo)');
+                    setDropPointAddress('Jl. P. Trunojoyo No. 331, Pamekasan, Madura');
+                    setDropPointLat(-7.1642);
+                    setDropPointLng(113.4819);
+                  }}
+                  className="bg-white hover:bg-neutral-100 text-[#080808] border border-[#e4e4e7] px-3 py-1 rounded-full text-[11px] font-semibold cursor-pointer active:scale-95 shadow-sm"
+                >
+                  🏢 J&T Trunojoyo Pamekasan (Arah Tlanakan)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDropPointName('J&T Express Drop Point Jokotole Pamekasan');
+                    setDropPointAddress('Jl. Jokotole No. 201-203, Buddagan, Pamekasan');
+                    setDropPointLat(-7.1616);
+                    setDropPointLng(113.4924);
+                  }}
+                  className="bg-white hover:bg-neutral-100 text-[#080808] border border-[#e4e4e7] px-3 py-1 rounded-full text-[11px] font-semibold cursor-pointer active:scale-95 shadow-sm"
+                >
+                  🏢 J&T Jokotole (DC Utama)
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] text-[#696969]">
+              <div>
+                <span>Lat:</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={dropPointLat}
+                  onChange={(e) => setDropPointLat(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-[#fafafa] border border-[#e4e4e7] rounded-lg px-2 py-1 text-[#080808] mt-0.5"
+                />
+              </div>
+              <div>
+                <span>Lng:</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={dropPointLng}
+                  onChange={(e) => setDropPointLng(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-[#fafafa] border border-[#e4e4e7] rounded-lg px-2 py-1 text-[#080808] mt-0.5"
+                />
+              </div>
+            </div>
           </div>
 
           <div>

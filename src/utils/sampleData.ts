@@ -1,14 +1,14 @@
 import type { CourierSettings, DeliveryPackage, DailyHistoryEntry } from '../types';
 
 export const DEFAULT_SETTINGS: CourierSettings = {
-  courierName: 'Sprinter J&T Branta',
-  dropPointName: 'J&T Drop Point Tlanakan / Branta Pamekasan',
-  dropPointAddress: 'Jl. Raya Tlanakan - Branta No. 12, Pamekasan, Madura',
-  dropPointLat: -7.2107,
-  dropPointLng: 113.4493,
+  courierName: 'Sprinter J&T Branta Pamekasan',
+  dropPointName: 'J&T Express Drop Point Pamekasan (Trunojoyo)',
+  dropPointAddress: 'Jl. P. Trunojoyo No. 331, Pamekasan, Madura',
+  dropPointLat: -7.1642,
+  dropPointLng: 113.4819,
   defaultStrategy: 'optimal-tsp',
   customWhatsAppTemplate:
-    'Halo Kak {NAMA}, saya kurir J&T Express area Branta - Tlanakan mau mengantar paket No. Resi {RESI}.\n{INFO_COD}\nSaat ini saya menuju alamat {ALAMAT}. Apakah ada orang di rumah? Terima kasih! 🙏',
+    'Halo Kak {NAMA}, saya kurir J&T Express mau mengantar paket No. Resi {RESI}.\n{INFO_COD}\nSaat ini saya menuju alamat {ALAMAT}. Apakah ada orang di rumah? Terima kasih! 🙏',
 };
 
 export const INITIAL_SAMPLE_PACKAGES: DeliveryPackage[] = [

@@ -22,13 +22,17 @@ export function App() {
   const [isScanOpen, setIsScanOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Settings: Otomatis sinkronkan ke Branta Pamekasan jika masih menggunakan data demo lama
+  // Settings: Otomatis sinkronkan ke Drop Point J&T Pamekasan (Trunojoyo)
   const [settings, setSettings] = useState<CourierSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.dropPointName && !parsed.dropPointName.includes('Menteng')) {
+        if (
+          parsed.dropPointName &&
+          !parsed.dropPointName.includes('Menteng') &&
+          !parsed.dropPointName.includes('Tlanakan / Branta')
+        ) {
           return parsed;
         }
       }
