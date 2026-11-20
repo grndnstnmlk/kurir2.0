@@ -428,6 +428,7 @@ export function App() {
         onClose={() => setIsSubscriptionOpen(false)}
         license={license}
         onLicenseUpdated={(newLicense) => setLicense(newLicense)}
+        adminWhatsAppNumber={settings.adminWhatsAppNumber}
       />
 
       {/* Owner / Admin License Generator Modal */}

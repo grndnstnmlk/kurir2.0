@@ -34,6 +34,7 @@ export interface CourierSettings {
   dropPointLng: number;
   defaultStrategy: RouteStrategy;
   customWhatsAppTemplate: string;
+  adminWhatsAppNumber?: string; // Nomor WhatsApp pemilik untuk penjualan lisensi Rp 100rb
 }
 
 export interface ParsedResiData {

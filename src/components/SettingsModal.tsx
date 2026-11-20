@@ -30,6 +30,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [dropPointLng, setDropPointLng] = useState(settings.dropPointLng);
   const [defaultStrategy, setDefaultStrategy] = useState<RouteStrategy>(settings.defaultStrategy);
   const [customWhatsAppTemplate, setCustomWhatsAppTemplate] = useState(settings.customWhatsAppTemplate);
+  const [adminWhatsAppNumber, setAdminWhatsAppNumber] = useState(
+    settings.adminWhatsAppNumber || '6281234567890'
+  );
   const [isGettingGps, setIsGettingGps] = useState(false);
 
   if (!isOpen) return null;
@@ -65,6 +68,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       dropPointLng: Number(dropPointLng),
       defaultStrategy,
       customWhatsAppTemplate,
+      adminWhatsAppNumber: adminWhatsAppNumber.trim().replace(/\D/g, '') || '6281234567890',
     });
     onClose();
   };
@@ -207,6 +211,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <option value="farthest-first">🏁 Titik Terjauh Mundur Pulang</option>
               <option value="nearest-first">📍 Terdekat Duluan</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-[#696969] mb-1 font-medium">
+              No. WhatsApp Penjualan Lisensi (Tujuan Pembeli Transfer Rp 100rb):
+            </label>
+            <input
+              type="text"
+              placeholder="Contoh: 6281234567890"
+              value={adminWhatsAppNumber}
+              onChange={(e) => setAdminWhatsAppNumber(e.target.value)}
+              className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-4 py-2 text-[#080808] text-xs font-mono focus:outline-none"
+            />
+            <span className="text-[10px] text-[#696969] mt-1 block">
+              Gunakan format 628... agar tombol "Beli Kode Akses" otomatis membuka chat WhatsApp Anda.
+            </span>
           </div>
 
           <div>
