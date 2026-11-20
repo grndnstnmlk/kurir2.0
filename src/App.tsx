@@ -11,6 +11,13 @@ import { ScanModal } from './components/ScanModal';
 import { CodSummaryView } from './components/CodSummaryView';
 import { HistoryView } from './components/HistoryView';
 import { SettingsModal } from './components/SettingsModal';
+import { SubscriptionModal } from './components/SubscriptionModal';
+import { AdminLicenseModal } from './components/AdminLicenseModal';
+import {
+  getLocalLicense,
+  syncLicenseWithCloud,
+  type LocalLicenseInfo,
+} from './utils/licenseManager';
 import { Camera } from 'lucide-react';
 
 const STORAGE_KEY_PACKAGES = 'kurir2_packages_v1';
@@ -21,6 +28,18 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'deck' | 'route' | 'map' | 'scan' | 'cod' | 'history'>('deck');
   const [isScanOpen, setIsScanOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+  // Status Lisensi Pengguna
+  const [license, setLicense] = useState<LocalLicenseInfo | null>(() => getLocalLicense());
+
+  useEffect(() => {
+    // Sinkronisasi status lisensi dengan database Supabase di background
+    syncLicenseWithCloud().then((updated) => {
+      if (updated) setLicense(updated);
+    });
+  }, []);
 
   // Settings: Otomatis sinkronkan ke Drop Point J&T Pamekasan (Trunojoyo)
   const [settings, setSettings] = useState<CourierSettings>(() => {
@@ -270,6 +289,9 @@ export function App() {
         courierName={settings.courierName}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenScan={() => setIsScanOpen(true)}
+        license={license}
+        onOpenSubscription={() => setIsSubscriptionOpen(true)}
+        onOpenAdminPanel={() => setIsAdminOpen(true)}
       />
 
       {/* Stats Bar shown on list/map/cod tabs */}
@@ -396,6 +418,22 @@ export function App() {
         onSaveSettings={(newSettings) => setSettings(newSettings)}
         onResetData={handleResetData}
         onLoadSampleData={handleLoadSampleData}
+        onOpenSubscription={() => setIsSubscriptionOpen(true)}
+        onOpenAdminPanel={() => setIsAdminOpen(true)}
+      />
+
+      {/* Subscription & License Gatekeeper Modal */}
+      <SubscriptionModal
+        isOpen={isSubscriptionOpen}
+        onClose={() => setIsSubscriptionOpen(false)}
+        license={license}
+        onLicenseUpdated={(newLicense) => setLicense(newLicense)}
+      />
+
+      {/* Owner / Admin License Generator Modal */}
+      <AdminLicenseModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
       />
     </div>
   );
