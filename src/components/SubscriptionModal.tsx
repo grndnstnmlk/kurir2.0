@@ -83,7 +83,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto font-aspekta">
       <div className="bg-[#fafafa] rounded-[32px] w-full max-w-lg shadow-2xl border border-[#e4e4e7] overflow-hidden my-auto max-h-[92vh] flex flex-col text-[#222222]">
-        
+
         {/* Header */}
         <div className="px-6 py-5 bg-[#fafafa] border-b border-[#e4e4e7] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -107,7 +107,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         </div>
 
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
-          
+
           {/* Status Box */}
           {isProActive ? (
             <div className="bg-emerald-50 border border-emerald-300 rounded-[24px] p-5 space-y-2">
@@ -147,11 +147,10 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           {/* Feedback Banner */}
           {feedback && (
             <div
-              className={`p-3.5 rounded-2xl text-xs font-medium border ${
-                feedback.type === 'success'
+              className={`p-3.5 rounded-2xl text-xs font-medium border ${feedback.type === 'success'
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                   : 'bg-red-50 text-red-800 border-red-200'
-              }`}
+                }`}
             >
               {feedback.text}
             </div>

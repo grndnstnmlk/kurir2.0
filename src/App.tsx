@@ -297,8 +297,8 @@ export function App() {
         onOpenAdminPanel={() => setIsAdminOpen(true)}
       />
 
-      {/* Stats Bar shown on list/map/cod tabs */}
-      {activeTab !== 'deck' && (
+      {/* Stats Bar shown only on route list and map tabs */}
+      {(activeTab === 'route' || activeTab === 'map') && (
         <StatsBar
           packages={packages}
           strategy={strategy}
