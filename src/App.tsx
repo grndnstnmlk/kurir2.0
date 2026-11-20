@@ -38,7 +38,7 @@ export function App() {
     }
   });
 
-  const [strategy, setStrategy] = useState<RouteStrategy>(settings.defaultStrategy || 'farthest-first');
+  const [strategy, setStrategy] = useState<RouteStrategy>(settings.defaultStrategy || 'optimal-tsp');
 
   // Paket: Otomatis sinkronkan ke sampel Branta Pamekasan jika masih demo lama
   const [packages, setPackages] = useState<DeliveryPackage[]>(() => {
@@ -49,14 +49,29 @@ export function App() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Jika masih sampel Menteng lama, perbarui ke Branta
           if (parsed[0]?.fullAddress?.includes('Menteng')) {
-            return INITIAL_SAMPLE_PACKAGES;
+            return optimizeDeliveryRoute(
+              INITIAL_SAMPLE_PACKAGES,
+              DEFAULT_SETTINGS.dropPointLat,
+              DEFAULT_SETTINGS.dropPointLng,
+              'optimal-tsp'
+            );
           }
           return parsed;
         }
       }
-      return INITIAL_SAMPLE_PACKAGES;
+      return optimizeDeliveryRoute(
+        INITIAL_SAMPLE_PACKAGES,
+        DEFAULT_SETTINGS.dropPointLat,
+        DEFAULT_SETTINGS.dropPointLng,
+        'optimal-tsp'
+      );
     } catch {
-      return INITIAL_SAMPLE_PACKAGES;
+      return optimizeDeliveryRoute(
+        INITIAL_SAMPLE_PACKAGES,
+        DEFAULT_SETTINGS.dropPointLat,
+        DEFAULT_SETTINGS.dropPointLng,
+        'optimal-tsp'
+      );
     }
   });
 
@@ -260,6 +275,8 @@ export function App() {
           strategy={strategy}
           onOptimize={handleOptimizeRoute}
           onOpenMultiStopMap={handleOpenMultiStopMap}
+          dropPointLat={settings.dropPointLat}
+          dropPointLng={settings.dropPointLng}
           onChangeStrategy={(newStrategy) => {
             setStrategy(newStrategy);
             const reordered = optimizeDeliveryRoute(
@@ -282,6 +299,8 @@ export function App() {
             whatsAppTemplate={settings.customWhatsAppTemplate}
             onOpenScan={() => setIsScanOpen(true)}
             onOpenMapTab={() => setActiveTab('map')}
+            dropPointLat={settings.dropPointLat}
+            dropPointLng={settings.dropPointLng}
           />
         )}
 
@@ -291,6 +310,8 @@ export function App() {
             onUpdateStatus={handleUpdateStatus}
             onMovePackage={handleMovePackage}
             whatsAppTemplate={settings.customWhatsAppTemplate}
+            dropPointLat={settings.dropPointLat}
+            dropPointLng={settings.dropPointLng}
           />
         )}
 

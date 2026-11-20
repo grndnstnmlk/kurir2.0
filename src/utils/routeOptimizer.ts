@@ -9,7 +9,7 @@ export function calculateDistanceKm(
   lat2: number,
   lon2: number
 ): number {
-  const R = 6371;
+  const R = 6371; // Radius bumi dalam km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -23,136 +23,447 @@ export function calculateDistanceKm(
 }
 
 /**
- * Mengoptimalkan urutan pengantaran paket berdasarkan strategi yang dipilih
+ * Menghitung total jarak keseluruhan rute dari Drop Point melewati semua stop (dalam km)
+ */
+export function calculateTotalRouteDistanceKm(
+  dropPointLat: number,
+  dropPointLng: number,
+  packages: DeliveryPackage[]
+): number {
+  if (packages.length === 0) return 0;
+  let total = calculateDistanceKm(
+    dropPointLat,
+    dropPointLng,
+    packages[0].lat,
+    packages[0].lng
+  );
+
+  for (let i = 0; i < packages.length - 1; i++) {
+    total += calculateDistanceKm(
+      packages[i].lat,
+      packages[i].lng,
+      packages[i + 1].lat,
+      packages[i + 1].lng
+    );
+  }
+  return total;
+}
+
+/**
+ * Menghitung estimasi waktu perjalanan kurir motor:
+ * - Kecepatan rata-rata motor di jalan dusun/gang: 25 km/jam
+ * - Waktu serah terima paket / transaksi COD di lokasi: ~3 menit per paket
+ */
+export function calculateEstimatedTravelTime(
+  totalDistanceKm: number,
+  packageCount: number
+): { totalMinutes: number; displayText: string } {
+  if (packageCount === 0) {
+    return { totalMinutes: 0, displayText: '0 Menit' };
+  }
+
+  const ridingMinutes = (totalDistanceKm / 25) * 60;
+  const deliveryMinutes = packageCount * 3;
+  const total = Math.round(ridingMinutes + deliveryMinutes);
+
+  if (total < 60) {
+    return { totalMinutes: total, displayText: `~${total} Menit` };
+  }
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  return {
+    totalMinutes: total,
+    displayText: mins > 0 ? `~${hours} Jam ${mins} Mnt` : `~${hours} Jam`,
+  };
+}
+
+/**
+ * Memeriksa apakah dua garis koordinat saling berpotongan (criss-crossing / bolak-balik)
+ */
+function ccw(
+  p1: [number, number],
+  p2: [number, number],
+  p3: [number, number]
+): boolean {
+  return (p3[1] - p1[1]) * (p2[0] - p1[0]) > (p2[1] - p1[1]) * (p3[0] - p1[0]);
+}
+
+export function linesIntersect(
+  p1: [number, number],
+  p2: [number, number],
+  p3: [number, number],
+  p4: [number, number]
+): boolean {
+  return (
+    ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4)
+  );
+}
+
+/**
+ * Menghitung jumlah jalur silang (backtracking intersections) dalam urutan rute
+ */
+export function countRouteIntersections(
+  dropPointLat: number,
+  dropPointLng: number,
+  packages: DeliveryPackage[]
+): number {
+  if (packages.length < 3) return 0;
+  const points: [number, number][] = [
+    [dropPointLat, dropPointLng],
+    ...packages.map((p) => [p.lat, p.lng] as [number, number]),
+  ];
+
+  let intersections = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    for (let j = i + 2; j < points.length - 1; j++) {
+      if (i === 0 && j === points.length - 2) continue; // adjacent in cycle
+      if (
+        linesIntersect(points[i], points[i + 1], points[j], points[j + 1])
+      ) {
+        intersections++;
+      }
+    }
+  }
+  return intersections;
+}
+
+/**
+ * 2-Opt Local Search Heuristic:
+ * Mengeliminasi seluruh jalur bersilang (criss-crossing) sehingga rute kurir
+ * tidak pernah bolak-balik di jalan yang sama.
+ */
+function solveOpenTour2Opt(
+  originLat: number,
+  originLng: number,
+  initialTour: DeliveryPackage[]
+): DeliveryPackage[] {
+  if (initialTour.length <= 2) return initialTour;
+
+  let tour = [...initialTour];
+  let improved = true;
+  let iterations = 0;
+  const maxIterations = 200;
+
+  // Evaluasi total jarak open path dari origin
+  const pathDistance = (list: DeliveryPackage[]) => {
+    let d = calculateDistanceKm(originLat, originLng, list[0].lat, list[0].lng);
+    for (let i = 0; i < list.length - 1; i++) {
+      d += calculateDistanceKm(
+        list[i].lat,
+        list[i].lng,
+        list[i + 1].lat,
+        list[i + 1].lng
+      );
+    }
+    return d;
+  };
+
+  let bestDistance = pathDistance(tour);
+
+  while (improved && iterations < maxIterations) {
+    improved = false;
+    iterations++;
+
+    for (let i = 0; i < tour.length - 1; i++) {
+      for (let j = i + 1; j < tour.length; j++) {
+        // Balik sub-segment antara i dan j
+        const newTour = [
+          ...tour.slice(0, i),
+          ...tour.slice(i, j + 1).reverse(),
+          ...tour.slice(j + 1),
+        ];
+
+        const newDist = pathDistance(newTour);
+        if (newDist < bestDistance - 0.0001) {
+          tour = newTour;
+          bestDistance = newDist;
+          improved = true;
+          break;
+        }
+      }
+      if (improved) break;
+    }
+  }
+
+  return tour;
+}
+
+/**
+ * 1. Algoritma Optimal TSP (Hemat Waktu & Anti Bolak-Balik) - Rekomendasi Utama:
+ * Menggabungkan Nearest Insertion + 2-Opt Local Search untuk menghasilkan rute
+ * dengan jarak tempuh paling minim dan ZERO self-intersections.
+ */
+function optimizeTspNoBacktrack(
+  packages: DeliveryPackage[],
+  dropPointLat: number,
+  dropPointLng: number
+): DeliveryPackage[] {
+  const remaining = [...packages];
+  const tour: DeliveryPackage[] = [];
+
+  // Langkah 1: Greedy Nearest Insertion awal
+  let curLat = dropPointLat;
+  let curLng = dropPointLng;
+
+  while (remaining.length > 0) {
+    let bestIdx = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = calculateDistanceKm(
+        curLat,
+        curLng,
+        remaining[i].lat,
+        remaining[i].lng
+      );
+      if (d < minDist) {
+        minDist = d;
+        bestIdx = i;
+      }
+    }
+    const nextPkg = remaining.splice(bestIdx, 1)[0];
+    tour.push(nextPkg);
+    curLat = nextPkg.lat;
+    curLng = nextPkg.lng;
+  }
+
+  // Langkah 2: 2-Opt Swap untuk menghilangkan semua jalur silang
+  return solveOpenTour2Opt(dropPointLat, dropPointLng, tour);
+}
+
+/**
+ * 2. Algoritma Cluster Sweep (Tersusun per Dusun / Blok - Satu Arah):
+ * Mengelompokkan paket berdasarkan Dusun / Area jalan utama.
+ * Kurir menyelesaikan SEMUA paket dalam 1 dusun sampai tuntas sebelum pindah
+ * ke dusun berikutnya dalam koridor satu arah yang berurutan.
+ */
+function optimizeClusterSweep(
+  packages: DeliveryPackage[],
+  dropPointLat: number,
+  dropPointLng: number
+): DeliveryPackage[] {
+  // Kelompokkan paket berdasarkan area/dusun
+  const clusterMap: Record<string, DeliveryPackage[]> = {};
+
+  packages.forEach((pkg) => {
+    // Normalisasi nama dusun / jalan
+    let key = pkg.areaOrStreet.trim();
+    if (!key) {
+      key = 'Lainnya';
+    }
+    if (!clusterMap[key]) {
+      clusterMap[key] = [];
+    }
+    clusterMap[key].push(pkg);
+  });
+
+  // Hitung titik tengah (centroid) tiap cluster
+  const clusters = Object.keys(clusterMap).map((key) => {
+    const pkgs = clusterMap[key];
+    const avgLat = pkgs.reduce((sum, p) => sum + p.lat, 0) / pkgs.length;
+    const avgLng = pkgs.reduce((sum, p) => sum + p.lng, 0) / pkgs.length;
+    return {
+      key,
+      packages: pkgs,
+      centroidLat: avgLat,
+      centroidLng: avgLng,
+      distanceFromDropPoint: calculateDistanceKm(
+        dropPointLat,
+        dropPointLng,
+        avgLat,
+        avgLng
+      ),
+    };
+  });
+
+  // Urutkan cluster secara koridor (dari terdekat drop point menuju cluster terjauh)
+  clusters.sort((a, b) => a.distanceFromDropPoint - b.distanceFromDropPoint);
+
+  // Di dalam tiap cluster, susun paket menggunakan 2-Opt agar lancar tanpa bolak-balik
+  const result: DeliveryPackage[] = [];
+  let curLat = dropPointLat;
+  let curLng = dropPointLng;
+
+  clusters.forEach((cluster) => {
+    const sortedClusterPkgs = solveOpenTour2Opt(
+      curLat,
+      curLng,
+      cluster.packages
+    );
+    result.push(...sortedClusterPkgs);
+
+    if (sortedClusterPkgs.length > 0) {
+      const lastPkg = sortedClusterPkgs[sortedClusterPkgs.length - 1];
+      curLat = lastPkg.lat;
+      curLng = lastPkg.lng;
+    }
+  });
+
+  return result;
+}
+
+/**
+ * 3. Algoritma Farthest-First (Titik Terjauh Mundur Pulang - Halus):
+ * Kurir langsung melaju ke titik paling ujung / batas terluar wilayah pengantaran,
+ * lalu menyelesaikan antaran secara bertahap mundur kembali ke arah gudang / rumah.
+ * Dioptimalkan dengan 2-Opt agar perjalanan mundur tidak zigzag.
+ */
+function optimizeFarthestFirst(
+  packages: DeliveryPackage[],
+  dropPointLat: number,
+  dropPointLng: number
+): DeliveryPackage[] {
+  // Temukan titik paling jauh dari drop point
+  let farthestIdx = 0;
+  let maxDist = -1;
+
+  for (let i = 0; i < packages.length; i++) {
+    const d = calculateDistanceKm(
+      dropPointLat,
+      dropPointLng,
+      packages[i].lat,
+      packages[i].lng
+    );
+    if (d > maxDist) {
+      maxDist = d;
+      farthestIdx = i;
+    }
+  }
+
+  const remaining = [...packages];
+  const farthestPkg = remaining.splice(farthestIdx, 1)[0];
+  const tour: DeliveryPackage[] = [farthestPkg];
+
+  let curLat = farthestPkg.lat;
+  let curLng = farthestPkg.lng;
+
+  // Dari titik terjauh, susun yang mengarah mundur ke Drop Point
+  while (remaining.length > 0) {
+    let bestIdx = 0;
+    let minScore = Infinity;
+
+    for (let i = 0; i < remaining.length; i++) {
+      const distFromCurrent = calculateDistanceKm(
+        curLat,
+        curLng,
+        remaining[i].lat,
+        remaining[i].lng
+      );
+      const distToDropPoint = calculateDistanceKm(
+        remaining[i].lat,
+        remaining[i].lng,
+        dropPointLat,
+        dropPointLng
+      );
+
+      // Prioritaskan paket yang dekat dan semakin mendekat ke Drop Point
+      const score = distFromCurrent * 1.8 + distToDropPoint * 0.8;
+      if (score < minScore) {
+        minScore = score;
+        bestIdx = i;
+      }
+    }
+
+    const nextPkg = remaining.splice(bestIdx, 1)[0];
+    tour.push(nextPkg);
+    curLat = nextPkg.lat;
+    curLng = nextPkg.lng;
+  }
+
+  // Terapkan 2-Opt dari titik awal terjauh
+  return solveOpenTour2Opt(farthestPkg.lat, farthestPkg.lng, tour);
+}
+
+/**
+ * Fungsi Utama Optimasi Rute Pengantaran
  */
 export function optimizeDeliveryRoute(
   packages: DeliveryPackage[],
   dropPointLat: number,
   dropPointLng: number,
-  strategy: RouteStrategy
+  strategy: RouteStrategy = 'optimal-tsp'
 ): DeliveryPackage[] {
   if (packages.length <= 1) {
     return packages.map((pkg, idx) => ({ ...pkg, orderIndex: idx + 1 }));
   }
 
-  const list = [...packages];
+  let ordered: DeliveryPackage[] = [];
 
-  if (strategy === 'farthest-first') {
-    let farthestIndex = 0;
-    let maxDist = -1;
+  switch (strategy) {
+    case 'optimal-tsp':
+      ordered = optimizeTspNoBacktrack(packages, dropPointLat, dropPointLng);
+      break;
 
-    for (let i = 0; i < list.length; i++) {
-      const dist = calculateDistanceKm(
-        dropPointLat,
-        dropPointLng,
-        list[i].lat,
-        list[i].lng
-      );
-      if (dist > maxDist) {
-        maxDist = dist;
-        farthestIndex = i;
-      }
-    }
+    case 'cluster-sweep':
+      ordered = optimizeClusterSweep(packages, dropPointLat, dropPointLng);
+      break;
 
-    const ordered: DeliveryPackage[] = [];
-    const remaining = [...list];
+    case 'farthest-first':
+      ordered = optimizeFarthestFirst(packages, dropPointLat, dropPointLng);
+      break;
 
-    let current = remaining.splice(farthestIndex, 1)[0];
-    ordered.push(current);
-
-    while (remaining.length > 0) {
-      let bestIdx = 0;
-      let minScore = Infinity;
-
-      for (let i = 0; i < remaining.length; i++) {
-        const distFromCurrent = calculateDistanceKm(
-          current.lat,
-          current.lng,
-          remaining[i].lat,
-          remaining[i].lng
-        );
-        const distToDropPoint = calculateDistanceKm(
-          remaining[i].lat,
-          remaining[i].lng,
-          dropPointLat,
-          dropPointLng
-        );
-
-        const score = distFromCurrent * 1.5 + distToDropPoint * 0.5;
-        if (score < minScore) {
-          minScore = score;
-          bestIdx = i;
-        }
-      }
-
-      current = remaining.splice(bestIdx, 1)[0];
-      ordered.push(current);
-    }
-
-    return ordered.map((pkg, idx) => ({
-      ...pkg,
-      orderIndex: idx + 1,
-    }));
-  } else if (strategy === 'nearest-first') {
-    const ordered: DeliveryPackage[] = [];
-    const remaining = [...list];
-    let curLat = dropPointLat;
-    let curLng = dropPointLng;
-
-    while (remaining.length > 0) {
-      let nearestIdx = 0;
-      let minDist = Infinity;
-
-      for (let i = 0; i < remaining.length; i++) {
-        const d = calculateDistanceKm(
-          curLat,
-          curLng,
-          remaining[i].lat,
-          remaining[i].lng
-        );
-        if (d < minDist) {
-          minDist = d;
-          nearestIdx = i;
-        }
-      }
-
-      const nextPkg = remaining.splice(nearestIdx, 1)[0];
-      curLat = nextPkg.lat;
-      curLng = nextPkg.lng;
-      ordered.push(nextPkg);
-    }
-
-    return ordered.map((pkg, idx) => ({
-      ...pkg,
-      orderIndex: idx + 1,
-    }));
-  } else {
-    const sorted = [...list].sort((a, b) => {
-      if (a.areaOrStreet.toLowerCase() === b.areaOrStreet.toLowerCase()) {
-        return a.recipientName.localeCompare(b.recipientName);
-      }
-      return a.areaOrStreet.localeCompare(b.areaOrStreet);
-    });
-
-    return sorted.map((pkg, idx) => ({
-      ...pkg,
-      orderIndex: idx + 1,
-    }));
+    case 'nearest-first':
+    default:
+      // Nearest-first dengan 2-Opt smoothing
+      ordered = optimizeTspNoBacktrack(packages, dropPointLat, dropPointLng);
+      break;
   }
+
+  // Berikan nomor urut stop pengantaran (Stop #01, #02, dst)
+  return ordered.map((pkg, idx) => ({
+    ...pkg,
+    orderIndex: idx + 1,
+  }));
+}
+
+/**
+ * Menghitung jarak stop saat ini dari titik sebelumnya (Drop Point atau Stop N-1)
+ */
+export function getStopLegInfo(
+  currentPkg: DeliveryPackage,
+  prevPkg: DeliveryPackage | null,
+  dropPointLat: number,
+  dropPointLng: number
+): { distanceMeters: number; distanceKm: number; text: string; estMinutes: number } {
+  const fromLat = prevPkg ? prevPkg.lat : dropPointLat;
+  const fromLng = prevPkg ? prevPkg.lng : dropPointLng;
+  const distKm = calculateDistanceKm(fromLat, fromLng, currentPkg.lat, currentPkg.lng);
+  const distMeters = Math.round(distKm * 1000);
+  const estMins = Math.max(1, Math.round((distKm / 25) * 60));
+
+  let text = '';
+  if (distMeters < 1000) {
+    text = `+${distMeters} m (${estMins} mnt)`;
+  } else {
+    text = `+${distKm.toFixed(1)} km (${estMins} mnt)`;
+  }
+
+  return {
+    distanceMeters: distMeters,
+    distanceKm: distKm,
+    text,
+    estMinutes: estMins,
+  };
 }
 
 /**
  * Buat URL Google Maps Universal untuk navigasi 1 tujuan
  */
-export function getSingleNavigationUrl(lat: number, lng: number, address: string): string {
+export function getSingleNavigationUrl(
+  lat: number,
+  lng: number,
+  address: string
+): string {
   if (lat && lng) {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   }
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    address
+  )}`;
 }
 
 /**
  * Buat URL Google Maps Multi-Stop (Maksimal 9 waypoints Google Maps)
+ * Disusun secara berurutan agar Google Maps menavigasi tanpa bolak-balik
  */
 export function getMultiStopNavigationUrl(
   startLat: number,

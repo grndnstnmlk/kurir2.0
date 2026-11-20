@@ -136,6 +136,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div>
+            <label className="block text-[#696969] mb-1 font-medium">Strategi Optimasi Rute Bawaan:</label>
+            <select
+              value={defaultStrategy}
+              onChange={(e) => setDefaultStrategy(e.target.value as RouteStrategy)}
+              className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-4 py-2 text-[#080808] font-semibold focus:outline-none focus:border-[#292929]"
+            >
+              <option value="optimal-tsp">⚡ Hemat Waktu & Anti Bolak-Balik (2-Opt TSP)</option>
+              <option value="cluster-sweep">🏘️ Tersusun per Dusun / Blok (Satu Arah)</option>
+              <option value="farthest-first">🏁 Titik Terjauh Mundur Pulang</option>
+              <option value="nearest-first">📍 Terdekat Duluan</option>
+            </select>
+          </div>
+
+          <div>
             <label className="block text-[#696969] mb-1 font-medium">Template Pesan WhatsApp:</label>
             <textarea
               rows={4}

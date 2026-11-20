@@ -12,13 +12,15 @@ import {
   DollarSign,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus } from '../types';
-import { getSingleNavigationUrl } from '../utils/routeOptimizer';
+import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
 
 interface RouteListViewProps {
   packages: DeliveryPackage[];
   onUpdateStatus: (id: string, status: PackageStatus, notes?: string) => void;
   onMovePackage: (index: number, direction: 'up' | 'down') => void;
   whatsAppTemplate: string;
+  dropPointLat?: number;
+  dropPointLng?: number;
 }
 
 export const RouteListView: React.FC<RouteListViewProps> = ({
@@ -26,6 +28,8 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   onUpdateStatus,
   onMovePackage,
   whatsAppTemplate,
+  dropPointLat = -7.2107,
+  dropPointLng = 113.4493,
 }) => {
   const [filter, setFilter] = React.useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
 
@@ -130,6 +134,8 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
           const originalIndex = packages.findIndex((p) => p.id === pkg.id);
           const isDelivered = pkg.status === 'delivered';
           const isProblem = pkg.status === 'rescheduled' || pkg.status === 'failed';
+          const prevPkg = originalIndex > 0 ? packages[originalIndex - 1] : null;
+          const legInfo = getStopLegInfo(pkg, prevPkg, dropPointLat, dropPointLng);
 
           return (
             <div
@@ -153,6 +159,9 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs text-[#696969]">
                         {pkg.trackingNumber}
+                      </span>
+                      <span className="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        📍 {prevPkg ? `+${legInfo.text} dari Stop #${originalIndex}` : `+${legInfo.text} dari Gudang`}
                       </span>
                       {pkg.isCod ? (
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#292929] text-[#fafafa]">

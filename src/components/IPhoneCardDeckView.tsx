@@ -17,7 +17,7 @@ import {
   Moon,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus } from '../types';
-import { getSingleNavigationUrl } from '../utils/routeOptimizer';
+import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
 
 interface IPhoneCardDeckViewProps {
   packages: DeliveryPackage[];
@@ -25,6 +25,8 @@ interface IPhoneCardDeckViewProps {
   whatsAppTemplate: string;
   onOpenScan: () => void;
   onOpenMapTab: () => void;
+  dropPointLat?: number;
+  dropPointLng?: number;
 }
 
 export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
@@ -33,6 +35,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   whatsAppTemplate,
   onOpenScan,
   onOpenMapTab,
+  dropPointLat = -7.2107,
+  dropPointLng = 113.4493,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -76,6 +80,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   const safeIndex = Math.min(currentIndex, packages.length - 1);
   const currentPkg = packages[safeIndex];
+  const prevPkg = safeIndex > 0 ? packages[safeIndex - 1] : null;
+  const legInfo = getStopLegInfo(currentPkg, prevPkg, dropPointLat, dropPointLng);
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -213,6 +219,9 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 <span className="text-xs font-mono font-bold text-neutral-800 tracking-tight block mt-0.5">
                   {currentPkg.trackingNumber}
                 </span>
+                <span className="inline-block mt-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  📍 {prevPkg ? `+${legInfo.text} dari Stop #${safeIndex}` : `+${legInfo.text} dari Gudang`}
+                </span>
               </div>
 
               {/* Exact Refero Yellow/Amber Parcel Icon Badge (Top-Right) */}
@@ -317,11 +326,12 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
           {/* Subtitle: "by Atoms x Any Distance" -> "by J&T Express × Branta Pamekasan" */}
           <p
-            className={`text-xs sm:text-sm font-medium tracking-wide uppercase mt-1.5 ${
+            className={`text-xs sm:text-sm font-medium tracking-wide uppercase mt-1.5 flex flex-wrap items-center gap-1.5 ${
               isDarkMode ? 'text-neutral-400' : 'text-neutral-600'
             }`}
           >
-            by J&T Express × {currentPkg.areaOrStreet || 'Branta Pamekasan'}
+            <span>by J&T Express × {currentPkg.areaOrStreet || 'Branta Pamekasan'}</span>
+            <span className="text-emerald-500 font-mono font-semibold">({legInfo.text})</span>
           </p>
 
           {/* Body Paragraph: Exact paragraph placement from Refero design */}

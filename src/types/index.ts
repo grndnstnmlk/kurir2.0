@@ -1,6 +1,10 @@
 export type PackageStatus = 'pending' | 'delivered' | 'rescheduled' | 'failed';
 
-export type RouteStrategy = 'farthest-first' | 'nearest-first' | 'cluster-loop';
+export type RouteStrategy =
+  | 'optimal-tsp'
+  | 'cluster-sweep'
+  | 'farthest-first'
+  | 'nearest-first';
 
 export interface DeliveryPackage {
   id: string;

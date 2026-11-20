@@ -6,7 +6,7 @@ export const DEFAULT_SETTINGS: CourierSettings = {
   dropPointAddress: 'Jl. Raya Tlanakan - Branta No. 12, Pamekasan, Madura',
   dropPointLat: -7.2107,
   dropPointLng: 113.4493,
-  defaultStrategy: 'farthest-first',
+  defaultStrategy: 'optimal-tsp',
   customWhatsAppTemplate:
     'Halo Kak {NAMA}, saya kurir J&T Express area Branta - Tlanakan mau mengantar paket No. Resi {RESI}.\n{INFO_COD}\nSaat ini saya menuju alamat {ALAMAT}. Apakah ada orang di rumah? Terima kasih! 🙏',
 };

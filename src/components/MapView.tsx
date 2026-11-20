@@ -1,8 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { DeliveryPackage, CourierSettings } from '../types';
-import { getSingleNavigationUrl } from '../utils/routeOptimizer';
-import { Compass } from 'lucide-react';
+import {
+  getSingleNavigationUrl,
+  calculateTotalRouteDistanceKm,
+  calculateEstimatedTravelTime,
+} from '../utils/routeOptimizer';
+import { Compass, CheckCircle2 } from 'lucide-react';
 
 interface MapViewProps {
   packages: DeliveryPackage[];
@@ -17,6 +21,14 @@ export const MapView: React.FC<MapViewProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const routeLineRef = useRef<L.Polyline | null>(null);
+
+  const totalDist = calculateTotalRouteDistanceKm(
+    settings.dropPointLat,
+    settings.dropPointLng,
+    packages
+  );
+  const pendingCount = packages.filter((p) => p.status === 'pending').length;
+  const estTime = calculateEstimatedTravelTime(totalDist, pendingCount);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -163,6 +175,20 @@ export const MapView: React.FC<MapViewProps> = ({
 
   return (
     <div className="relative w-full h-[calc(100vh-190px)] min-h-[480px]">
+      {/* Floating Route Efficiency Banner at Top */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex justify-center pointer-events-none">
+        <div className="bg-[#ffffff]/95 backdrop-blur-md border border-[#e4e4e7] rounded-full px-4 py-2 shadow-subtle flex items-center gap-2 text-xs font-semibold text-[#080808] pointer-events-auto">
+          <span className="text-blue-600">📍 {totalDist.toFixed(1)} km</span>
+          <span className="text-[#cccccc]">•</span>
+          <span>⏱️ {estTime.displayText}</span>
+          <span className="text-[#cccccc]">•</span>
+          <span className="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-emerald-200 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            Rute Tersusun Anti Bolak-Balik
+          </span>
+        </div>
+      </div>
+
       <div ref={mapContainerRef} className="w-full h-full z-0 bg-[#fafafa]" />
 
       <div className="absolute bottom-4 left-4 right-4 z-10 bg-[#fafafa]/95 border border-[#e4e4e7] rounded-full px-5 py-3 shadow-subtle flex items-center justify-between text-xs font-aspekta text-[#222222]">
