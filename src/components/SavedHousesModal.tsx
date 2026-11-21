@@ -14,8 +14,10 @@ import {
   Compass,
   Check,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 import type { SavedHousePoint } from '../types';
+import { exportAppBackup } from '../utils/backupManager';
 
 interface SavedHousesModalProps {
   isOpen: boolean;
@@ -119,7 +121,15 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => exportAppBackup()}
+              title="Cadangkan (Backup) seluruh data titik rumah ke file"
+              className="p-2 rounded-full hover:bg-[#f4f4f5] text-[#080808] border border-[#e4e4e7] transition cursor-pointer flex items-center justify-center shadow-2xs"
+            >
+              <Download className="w-4 h-4 text-blue-600" />
+            </button>
+
             <button
               onClick={onAddNew}
               className="bg-[#080808] hover:bg-neutral-800 active:scale-95 text-white font-bold text-xs px-3.5 py-2 rounded-full transition shadow-sm flex items-center gap-1.5 cursor-pointer"

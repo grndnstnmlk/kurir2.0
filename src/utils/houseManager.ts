@@ -1,4 +1,5 @@
 import type { SavedHousePoint, DeliveryPackage } from '../types';
+import { supabase } from './supabaseClient';
 
 const STORAGE_KEY_SAVED_HOUSES = 'kurir2_saved_house_points';
 
@@ -93,10 +94,101 @@ export function saveHousePoint(house: SavedHousePoint): SavedHousePoint[] {
     }
 
     localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(updated));
+
+    // Sinkronisasi background otomatis ke cloud Supabase (jika online & tabel sudah dibuat)
+    syncHousesWithSupabase().catch(() => {});
+
     return updated;
   } catch (err) {
     console.error('Failed to save house point:', err);
     return getSavedHousePoints();
+  }
+}
+
+/**
+ * Sinkronisasi data titik rumah lokal ke Cloud Supabase
+ */
+export async function syncHousesWithSupabase(): Promise<{
+  success: boolean;
+  count: number;
+  error?: string;
+}> {
+  try {
+    const localHouses = getSavedHousePoints();
+    if (localHouses.length === 0) return { success: true, count: 0 };
+
+    const payload = localHouses.map((h) => ({
+      id: h.id,
+      recipient_name: h.recipientName,
+      recipient_phone: h.recipientPhone,
+      full_address: h.fullAddress,
+      area_or_street: h.areaOrStreet,
+      benchmark: h.benchmark,
+      photo_url: h.photoUrl,
+      lat: h.lat,
+      lng: h.lng,
+      accuracy_meters: h.accuracyMeters,
+      notes: h.notes,
+      saved_at: h.savedAt,
+      delivery_count: h.deliveryCount || 1,
+    }));
+
+    const { error } = await supabase
+      .from('saved_houses')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      return { success: false, count: 0, error: error.message };
+    }
+
+    return { success: true, count: payload.length };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err?.message || 'Gagal sinkron cloud' };
+  }
+}
+
+/**
+ * Mengambil data titik rumah dari Cloud Supabase (untuk pulihkan data di HP baru)
+ */
+export async function fetchHousesFromSupabase(): Promise<{
+  success: boolean;
+  houses?: SavedHousePoint[];
+  error?: string;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from('saved_houses')
+      .select('*')
+      .order('saved_at', { ascending: false });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: true, houses: [] };
+    }
+
+    const mapped: SavedHousePoint[] = data.map((r: any) => ({
+      id: r.id,
+      recipientName: r.recipient_name,
+      recipientPhone: r.recipient_phone || '',
+      fullAddress: r.full_address,
+      areaOrStreet: r.area_or_street || '',
+      benchmark: r.benchmark || '',
+      photoUrl: r.photo_url || undefined,
+      lat: r.lat,
+      lng: r.lng,
+      accuracyMeters: r.accuracy_meters || undefined,
+      notes: r.notes || '',
+      savedAt: r.saved_at || new Date().toISOString(),
+      deliveryCount: r.delivery_count || 1,
+    }));
+
+    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(mapped));
+    return { success: true, houses: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Gagal memuat dari cloud' };
   }
 }
 

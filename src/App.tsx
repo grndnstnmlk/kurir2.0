@@ -26,6 +26,7 @@ import {
   syncLicenseWithCloud,
   type LocalLicenseInfo,
 } from './utils/licenseManager';
+import { requestPersistentStorage } from './utils/backupManager';
 import { Camera } from 'lucide-react';
 
 const STORAGE_KEY_PACKAGES = 'kurir2_packages_v1';
@@ -49,6 +50,9 @@ export function App() {
   const [license, setLicense] = useState<LocalLicenseInfo | null>(() => getLocalLicense());
 
   useEffect(() => {
+    // Kunci memori penyimpanan HP agar tidak dihapus otomatis oleh sistem Android/iOS
+    requestPersistentStorage();
+
     // Sinkronisasi status lisensi dengan database Supabase di background
     syncLicenseWithCloud().then((updated) => {
       if (updated) setLicense(updated);
@@ -569,6 +573,7 @@ export function App() {
         onLoadSampleData={handleLoadSampleData}
         onOpenSubscription={() => setIsSubscriptionOpen(true)}
         onOpenHousesDirectory={() => setIsHousesDirectoryOpen(true)}
+        onHousesRestored={() => setSavedHouses(getSavedHousePoints())}
       />
 
       {/* Subscription & License Gatekeeper Modal */}

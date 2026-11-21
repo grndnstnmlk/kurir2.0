@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Settings, MapPin, X, Compass } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Settings, MapPin, X, Compass, Download, Upload, Cloud, ShieldCheck } from 'lucide-react';
 import type { CourierSettings, RouteStrategy } from '../types';
+import { exportAppBackup, importAppBackup } from '../utils/backupManager';
+import { syncHousesWithSupabase, fetchHousesFromSupabase } from '../utils/houseManager';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface SettingsModalProps {
   onLoadSampleData: () => void;
   onOpenSubscription?: () => void;
   onOpenHousesDirectory?: () => void;
+  onHousesRestored?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -22,6 +25,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onLoadSampleData,
   onOpenSubscription,
   onOpenHousesDirectory,
+  onHousesRestored,
 }) => {
   const [courierName, setCourierName] = useState(settings.courierName);
   const [dropPointName, setDropPointName] = useState(settings.dropPointName);
@@ -34,8 +38,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     settings.adminWhatsAppNumber || '6281295713923'
   );
   const [isGettingGps, setIsGettingGps] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  const handleExportBackup = () => {
+    exportAppBackup();
+  };
+
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (confirm(`Pulihkan data dari file "${file.name}"? Data saat ini akan digantikan dengan data cadangan.`)) {
+      const res = await importAppBackup(file);
+      alert(res.message);
+      if (res.success) {
+        if (onHousesRestored) onHousesRestored();
+        onClose();
+        window.location.reload();
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSyncToSupabase = async () => {
+    setIsSyncingCloud(true);
+    setSyncFeedback(null);
+    const res = await syncHousesWithSupabase();
+    setIsSyncingCloud(false);
+    if (res.success) {
+      setSyncFeedback(`✅ Berhasil menyinkronkan ${res.count} titik rumah ke Cloud Supabase!`);
+    } else {
+      setSyncFeedback(`ℹ️ Catatan: ${res.error}. Buat tabel 'saved_houses' di Supabase SQL Editor agar otomatis tersimpan di Cloud.`);
+    }
+  };
 
   const handleGetCurrentGps = () => {
     if (!navigator.geolocation) {
@@ -265,6 +304,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               Hapus Data
             </button>
+          </div>
+
+          {/* Keamanan & Cadangan Data (Backup & Cloud Sync) */}
+          <div className="pt-3 border-t border-[#e4e4e7] space-y-2.5">
+            <div className="flex items-center gap-1.5 text-[#080808] font-bold text-xs">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Keamanan & Cadangan Data (Anti-Hilang)</span>
+            </div>
+            <p className="text-[11px] text-[#696969] leading-relaxed">
+              Data titik rumah tersimpan di memori aman HP Anda. Cadangkan secara berkala ke file agar tetap aman jika ganti HP.
+            </p>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              className="hidden"
+              onChange={handleImportFileChange}
+            />
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleExportBackup}
+                className="py-2.5 px-3 rounded-full bg-white hover:bg-[#f4f4f5] text-[#080808] font-bold text-xs border border-[#e4e4e7] cursor-pointer shadow-2xs active:scale-95 transition flex items-center justify-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5 text-blue-600" />
+                <span>Cadangkan ke File (.json)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="py-2.5 px-3 rounded-full bg-white hover:bg-[#f4f4f5] text-[#080808] font-bold text-xs border border-[#e4e4e7] cursor-pointer shadow-2xs active:scale-95 transition flex items-center justify-center gap-1.5"
+              >
+                <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Pulihkan dari File</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSyncToSupabase}
+              disabled={isSyncingCloud}
+              className="w-full py-2 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-xs border border-emerald-200 cursor-pointer shadow-2xs active:scale-95 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <Cloud className="w-3.5 h-3.5 text-emerald-700" />
+              <span>{isSyncingCloud ? 'Menghubungkan ke Supabase...' : 'Sinkronkan Titik ke Cloud Supabase'}</span>
+            </button>
+
+            {syncFeedback && (
+              <p className="text-[10px] text-[#696969] bg-[#f4f4f5] p-2 rounded-xl font-mono leading-relaxed">
+                {syncFeedback}
+              </p>
+            )}
           </div>
 
           {/* Buku Titik Rumah & Lisensi */}
