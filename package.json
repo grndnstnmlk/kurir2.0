@@ -12,6 +12,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",
     "@types/leaflet": "^1.9.22",
+    "@zxing/library": "^0.21.3",
+    "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.76.0",
     "react": "^19.3.1",

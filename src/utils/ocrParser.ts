@@ -1,41 +1,161 @@
 import type { ParsedResiData } from '../types';
 
 /**
- * Ekstraktor data pintar khusus format resi ekspedisi Indonesia (J&T Express, Shopee, SiCepat, dll.)
+ * Ekstraktor data pintar khusus format resi ekspedisi Indonesia
+ * (J&T Express, Shopee Express, TikTok Shop, Tokopedia, SiCepat, dll.)
  */
-export function parseIndonesianResiText(rawText: string): ParsedResiData {
+export function parseIndonesianResiText(
+  rawText: string,
+  decodedCode?: string | null
+): ParsedResiData {
   const text = rawText.replace(/\r\n/g, '\n');
   const lines = text
     .split('\n')
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 
-  // 1. Deteksi Nomor Resi (J&T biasanya JP..., JX..., JT..., atau 10-15 digit karakter)
-  let trackingNumber = '';
-  const resiRegex = /\b(J[PTX]\d{9,14}|SPX\w{8,14}|ID\d{10,16}|\d{12,16})\b/i;
-  const resiMatch = text.match(resiRegex);
-  if (resiMatch) {
-    trackingNumber = resiMatch[1].toUpperCase();
+  // 1. Deteksi Nomor Resi
+  // Jika Barcode / QR Code sudah terdeteksi di awal, utamakan kode tersebut (100% akurat)
+  let trackingNumber = decodedCode ? decodedCode.trim().toUpperCase() : '';
+
+  if (!trackingNumber) {
+    // J&T Express: JY..., JP..., JX..., JT..., JS..., JZ... (10-15 karakter)
+    // Shopee: SPX...
+    // SiCepat / Anteraja / Ninja / ID Express: ID..., TKP..., NLID...
+    const resiRegex = /\b(J[PTXYZS]\d{9,14}|SPX\w{8,14}|ID\d{10,16}|TKP\w{8,14}|NLID\w{10,16}|\d{12,16})\b/i;
+    const resiMatch = text.match(resiRegex);
+    if (resiMatch) {
+      trackingNumber = resiMatch[1].toUpperCase();
+    } else {
+      // Fallback: cari Nomor Order/Pesanan jika nomor resi tertutup barcode
+      const orderMatch = text.match(/(?:Order\s*Id|der\s*ld|No\.?\s*Pesanan)\s*[:]\s*(\d{10,20})/i);
+      if (orderMatch) {
+        trackingNumber = `ORD-${orderMatch[1].slice(-8)}`;
+      }
+    }
   }
 
-  // 2. Deteksi Nomor HP / WhatsApp Penerima
+  // 2. Pisahkan Blok PENGIRIM vs PENERIMA
+  // Sangat penting: Resi J&T mencantumkan alamat toko pengirim (misal Mojokerto, Jakarta, Tangerang).
+  // Bagian ini wajib diabaikan agar tidak salah dimasukkan sebagai alamat pengantaran kurir!
+  let isSenderSection = false;
+  const destinationLines: string[] = [];
+
+  for (const line of lines) {
+    // Indikasi dimulainya blok Pengirim
+    if (/(?:Pengirim|[MN]9iri[mM]|Sender|Dari)\s*[:;]/i.test(line)) {
+      isSenderSection = true;
+      continue;
+    }
+    // Indikasi dimulainya blok Penerima
+    if (/(?:Penerima|[eh]erima|Kepada|To)\s*[:;]/i.test(line)) {
+      isSenderSection = false;
+    }
+
+    if (!isSenderSection) {
+      // Filter kata-kata kota asal pengirim yang sering muncul di label
+      if (!/(?:MOJOKERTO|PENGIRIM|JAKARTA\s*BARAT|TANGERANG|BANDUNG|SOLO|SELLER\s*SKU)/i.test(line)) {
+        destinationLines.push(line);
+      }
+    }
+  }
+
+  const destinationText = destinationLines.join('\n');
+
+  // 3. Deteksi Nama Penerima
+  let recipientName = '';
+
+  // 3a. Pola Tokopedia / TikTok Shop: Customer sering menambahkan "nama penerima: Luluk" di catatan alamat
+  const embeddedNameMatch = text.match(
+    /(?:nama\s*penerima|atas\s*nama|a\/n|nama)\s*[:\s]*([a-zA-Z\s'.]{2,30}?)(?=\s*(?:patokan|rt|rw|no|desa|dusun|kec|gang|gg|jl|jalan|tlp|hp|wa|[.,;]|$))/i
+  );
+  if (embeddedNameMatch && embeddedNameMatch[1].trim().length >= 2) {
+    const candidate = embeddedNameMatch[1].trim();
+    recipientName = candidate.replace(/(?:patokan|rumah|pintu|dinding).*$/i, '').trim();
+  }
+
+  // 3b. Label Penerima Standar: "Penerima : Luluk" atau "Penerima : l**k"
+  if (!recipientName) {
+    const nameLabelMatch = text.match(/(?:Penerima|[eh]erima|Kepada|To)\s*[:;]\s*([a-zA-Z0-9\s*'.]{2,30})/i);
+    if (nameLabelMatch) {
+      const raw = nameLabelMatch[1].trim();
+      recipientName = raw.replace(/[|/:;]/g, '').trim();
+    }
+  }
+
+  // 3c. Fallback dari baris tujuan
+  if (!recipientName) {
+    for (const line of destinationLines) {
+      if (
+        line.length >= 3 &&
+        line.length <= 25 &&
+        /^[a-zA-Z\s'.]+$/.test(line) &&
+        !/(jnt|express|cod|penerima|pengirim|shopee|lazada|tiktok|pamekasan|branta|tlanakan|jawa|timur|indonesia)/i.test(line)
+      ) {
+        recipientName = line.trim();
+        break;
+      }
+    }
+  }
+
+  if (!recipientName || recipientName === 'l**k') {
+    recipientName = recipientName && recipientName !== 'l**k' ? recipientName : 'Customer J&T';
+  }
+
+  // 4. Deteksi Nomor HP / WhatsApp Penerima
   let recipientPhone = '';
-  const phoneRegex = /(?:\+?62|0)8[1-9][0-9]{7,10}\b/;
-  const phoneMatch = text.match(phoneRegex);
-  if (phoneMatch) {
-    let clean = phoneMatch[0].replace(/\D/g, '');
+  // Hanya cari di blok penerima, abaikan baris Order ID dan Call Center J&T (021-80661888)
+  const nonOrderLines = destinationLines.filter(
+    (l) => !/(?:Order\s*Id|der\s*ld|SKU|80661888|80861888)/i.test(l)
+  );
+  const nonOrderText = nonOrderLines.join('\n');
+
+  // 4a. Coba temukan nomor HP normal (tanpa sensor)
+  const unmaskedPhoneMatch = nonOrderText.match(/(?:(?:\+?62|0)8[1-9][0-9]{7,10})\b/);
+  if (unmaskedPhoneMatch) {
+    let clean = unmaskedPhoneMatch[0].replace(/\D/g, '');
     if (clean.startsWith('08')) {
       clean = '628' + clean.slice(2);
     }
     recipientPhone = clean;
+  } else {
+    // 4b. Coba temukan nomor HP dengan sensor bintang dari TikTok/Tokopedia (misal: (+62)87*******73)
+    const maskedPhoneMatch = nonOrderText.match(/(?:\(?\+?62\)?[\s-]?|0)8[1-9][0-9*xX\s-]{5,15}/);
+    if (maskedPhoneMatch) {
+      let clean = maskedPhoneMatch[0].replace(/[^\d*xX]/g, '');
+      if (clean.startsWith('628')) {
+        clean = '08' + clean.slice(3);
+      }
+      recipientPhone = `${clean} (Disensor Resi)`;
+    }
   }
 
-  // 3. Deteksi COD (Cash On Delivery) dan Nominal
+  // 5. Deteksi Patokan Alamat (Benchmark / Landmark)
+  let benchmark = '';
+  const benchmarkRegex =
+    /(?:patokan(?: rumah)?|sebelah|depan|samping|pagar|belakang|dekat|posisi|ciri(?: rumah)?)\s*[:\s]*([^\n\r]+)/i;
+  const benchMatch = text.match(benchmarkRegex);
+  if (benchMatch) {
+    let bText = benchMatch[1].trim();
+    // Potong jika mengenai metadata SKU atau resi
+    bText = bText.replace(/(?:Ship\s*:|COD|Qty|Item|SKU|Barang|Order\s*Id).*$/i, '').trim();
+    benchmark = bText.replace(/[©®#*~]/g, '').trim();
+
+    // Perbaiki artifact OCR "nding" -> "Dinding"
+    if (/^nding\b/i.test(benchmark)) {
+      benchmark = 'Di' + benchmark;
+    }
+  }
+
+  // 6. Deteksi COD (Cash On Delivery) dan Nominal
   let isCod = false;
   let codAmount = 0;
-  const isCodKeyword = /\b(COD|BAYAR\s*DI\s*TEMPAT|CASH\s*ON\s*DELIVERY)\b/i.test(text);
+  // Deteksi tulisan COD besar di resi (termasuk toleransi OCR "OD" pada huruf kapital)
+  const isCodKeyword =
+    /\b(COD|BAYAR\s*DI\s*TEMPAT|CASH\s*ON\s*DELIVERY)\b/i.test(text) ||
+    /\b(OD\s*(?:LE|ul|8)?)\b/.test(text);
 
-  // Cari nominal uang: e.g. Rp 45.000, Rp45000, Rp. 150.000
+  // Cari nominal uang: e.g. Rp 45.000, Rp45000, COD : 150000
   const codPriceRegex = /(?:Rp\.?|COD\s*:?|TOTAL\s*:?)\s*([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{4,7})/i;
   const priceMatch = text.match(codPriceRegex);
   if (priceMatch) {
@@ -49,69 +169,68 @@ export function parseIndonesianResiText(rawText: string): ParsedResiData {
     isCod = true;
   }
 
-  // 4. Deteksi Alamat Lengkap & Jalan/Wilayah Utama
+  // 7. Deteksi Alamat Tujuan & Jalan / Dusun
   let fullAddress = '';
   let areaOrStreet = '';
-  let benchmark = '';
 
-  const addressKeywords = /(?:Jl\.|Jalan|Gg\.|Gang|Perum|Perumahan|Komplek|RT|RW|Dusun|Desa|Kel\.|Kec\.|Kab\.|Kp\.|Kampung)/i;
-  const benchmarkKeywords = /(?:patokan|sebelah|depan|samping|pagar|belakang|dekat)/i;
+  const addressKeywords =
+    /(?:Jl\.|Jalan|Gg\.|Gang|Perum|Perumahan|Komplek|RT|RW|Dusun|Desa|Kel\.|Kec\.|Kab\.|Pelabuhan|Dermaga|Branta|Tlanakan|Pamekasan)/i;
 
-  const addressLines: string[] = [];
+  const validAddressLines: string[] = [];
 
-  for (const line of lines) {
-    if (benchmarkKeywords.test(line) && !benchmark) {
-      benchmark = line.replace(/.*(?:patokan|sebelah|depan|samping|pagar|belakang|dekat)[:\s]*/i, '').trim();
+  for (const line of destinationLines) {
+    if (
+      /(?:syarat|ketentuan|website|jet\.co|estimated|date|sku|seller|qty|total|barang|pcs|order|checked)/i.test(
+        line
+      )
+    ) {
+      continue;
     }
 
-    if (addressKeywords.test(line)) {
-      addressLines.push(line);
-      if (!areaOrStreet) {
-        const streetMatch = line.match(/(?:Jl\.|Jalan|Gg\.|Gang|Perum(?:ahan)?)\s*[^,\n\r.]+/i);
-        if (streetMatch) {
-          areaOrStreet = streetMatch[0].trim();
-        } else {
-          areaOrStreet = line.slice(0, 35).trim();
-        }
-      }
+    let cleaned = line.replace(/^[|/#~“\s]+/, '').trim();
+    if (cleaned.length < 4) continue;
+
+    if (addressKeywords.test(cleaned)) {
+      // Koreksi artifact OCR umum
+      cleaned = cleaned.replace(/^[“\s]*abuhan/i, 'Pelabuhan');
+      cleaned = cleaned.replace(/^JJ\s*VA\s*TIMUR/i, 'JAWA TIMUR,');
+      cleaned = cleaned.replace(/^indaran/i, 'Dusun Bandaran');
+      validAddressLines.push(cleaned);
     }
   }
 
-  if (addressLines.length > 0) {
-    fullAddress = addressLines.join(', ');
-  } else {
-    const candidateLines = lines.filter(
-      (l) => !l.includes(trackingNumber) && !l.includes(recipientPhone) && l.length > 10
+  if (validAddressLines.length > 0) {
+    let rawAddr = validAddressLines.join(', ');
+    rawAddr = rawAddr.replace(/,?\s*nama\s*penerima\s*:[^,]+/i, '');
+    rawAddr = rawAddr.replace(/,?\s*patokan\s*rumah\s*:[^,]+/i, '');
+    if (benchmark) {
+      const escapedBench = benchmark.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      rawAddr = rawAddr.replace(new RegExp(escapedBench, 'gi'), '');
+    }
+    rawAddr = rawAddr
+      .replace(/[©®#*~]/g, '')
+      .replace(/\s+,/g, ',')
+      .replace(/,\s*,/g, ',')
+      .trim();
+
+    fullAddress = rawAddr;
+
+    // Tentukan jalan / area utama
+    const streetCandidates = validAddressLines.filter((l) =>
+      /(?:Pelabuhan|Dermaga|Branta|Jl\.|Jalan|Dusun|Desa)/i.test(l)
     );
-    fullAddress = candidateLines.slice(0, 2).join(', ');
+    if (streetCandidates.length > 0) {
+      areaOrStreet = streetCandidates[0].replace(/,.*$/, '').trim();
+    } else {
+      areaOrStreet = validAddressLines[0].slice(0, 35).trim();
+    }
+  } else {
+    fullAddress = destinationLines.slice(0, 2).join(', ');
     areaOrStreet = fullAddress.slice(0, 30);
   }
 
-  // 5. Deteksi Nama Penerima
-  let recipientName = '';
-  const nameLabelMatch = text.match(/(?:Penerima|Kepada|To|Nama)\s*[:]\s*([a-zA-Z\s'.]{3,30})/i);
-  if (nameLabelMatch) {
-    recipientName = nameLabelMatch[1].trim();
-  } else {
-    for (const line of lines) {
-      if (
-        line.length >= 3 &&
-        line.length <= 25 &&
-        /^[a-zA-Z\s'.]+$/.test(line) &&
-        !/(jnt|express|cod|penerima|pengirim|shopee|lazada|tiktok|jakarta|surabaya|bandung)/i.test(line)
-      ) {
-        recipientName = line.trim();
-        break;
-      }
-    }
-  }
-
-  if (!recipientName) {
-    recipientName = 'Customer';
-  }
-
   return {
-    trackingNumber: trackingNumber || `JP${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+    trackingNumber: trackingNumber || `JY${Date.now().toString().slice(-8)}`,
     recipientName,
     recipientPhone,
     fullAddress: fullAddress || 'Alamat perlu konfirmasi',

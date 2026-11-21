@@ -9,6 +9,7 @@ import {
 import type { DeliveryPackage, CourierSettings } from '../types';
 import { parseIndonesianResiText } from '../utils/ocrParser';
 import { geocodeAddress } from '../utils/geocoding';
+import { preprocessAndScanResiImage } from '../utils/imageScanner';
 
 interface ScanModalProps {
   isOpen: boolean;
@@ -46,16 +47,20 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
   const handleImageUpload = async (file: File) => {
     try {
-      const imageUrl = URL.createObjectURL(file);
-      setImagePreview(imageUrl);
       setIsProcessingOcr(true);
-      setOcrProgress(10);
+      setOcrProgress(15);
 
+      // 1. Pindai Barcode / QR Code langsung & Auto-crop label putih dari background plastik gelap
+      const { processedBlob, previewUrl, decodedCode } = await preprocessAndScanResiImage(file);
+      setImagePreview(previewUrl);
+      setOcrProgress(35);
+
+      // 2. OCR Tesseract pada gambar label yang sudah terpotong bersih
       const worker = await createWorker('ind+eng');
-      setOcrProgress(40);
+      setOcrProgress(55);
 
-      const ret = await worker.recognize(file);
-      setOcrProgress(80);
+      const ret = await worker.recognize(processedBlob);
+      setOcrProgress(85);
       const text = ret.data.text;
       setRawOcrText(text);
 
@@ -63,8 +68,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       setOcrProgress(100);
       setIsProcessingOcr(false);
 
-      const parsed = parseIndonesianResiText(text);
-      setTrackingNumber(parsed.trackingNumber || `JX${Date.now().toString().slice(-8)}`);
+      // 3. Parser cerdas resi ekspedisi Indonesia (J&T, Shopee, TikTok Shop)
+      const parsed = parseIndonesianResiText(text, decodedCode);
+      setTrackingNumber(parsed.trackingNumber || `JY${Date.now().toString().slice(-8)}`);
       setRecipientName(parsed.recipientName || '');
       setRecipientPhone(parsed.recipientPhone || '');
       setFullAddress(parsed.fullAddress || '');
