@@ -19,6 +19,7 @@ import {
   getSavedHousePoints,
   saveHousePoint,
   deleteHousePoint,
+  quickRecordCurrentGpsPoint,
 } from './utils/houseManager';
 import {
   getLocalLicense,
@@ -233,6 +234,75 @@ export function App() {
     setSavedHouses(updated);
   };
 
+  /**
+   * Kunci titik lokasi GPS instan saat kurir berada di depan rumah (1-Tap)
+   * Mengupdate koordinat paket langsung & menyimpannya ke buku titik rumah
+   */
+  const handleQuickPinGps = async (
+    pkg: DeliveryPackage
+  ): Promise<{ success: boolean; accuracy?: number; error?: string }> => {
+    try {
+      const { savedHouse, updatedList } = await quickRecordCurrentGpsPoint(pkg);
+      setSavedHouses(updatedList);
+
+      // Perbarui koordinat paket saat ini agar navigasi maps langsung akurat
+      setPackages((prev) => {
+        const next = prev.map((p) => {
+          if (p.id === pkg.id) {
+            return {
+              ...p,
+              lat: savedHouse.lat,
+              lng: savedHouse.lng,
+              areaOrStreet: savedHouse.areaOrStreet || p.areaOrStreet,
+              benchmark: savedHouse.benchmark || p.benchmark,
+            };
+          }
+          return p;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(next));
+        } catch (e) {
+          console.error('Failed to persist package GPS update:', e);
+        }
+        return next;
+      });
+
+      return { success: true, accuracy: savedHouse.accuracyMeters };
+    } catch (err: any) {
+      console.error('Failed to lock GPS point:', err);
+      return {
+        success: false,
+        error: err.message || 'Gagal mengunci GPS. Pastikan izin lokasi HP aktif.',
+      };
+    }
+  };
+
+  /**
+   * Kunci titik GPS lapangan saat kurir berdiri di lokasi manapun (tanpa terikat paket)
+   */
+  const handleQuickPinCurrentLocation = async (): Promise<{
+    success: boolean;
+    accuracy?: number;
+    error?: string;
+  }> => {
+    try {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const { savedHouse, updatedList } = await quickRecordCurrentGpsPoint(
+        undefined,
+        `Titik Lapangan (${timeStr})`
+      );
+      setSavedHouses(updatedList);
+      return { success: true, accuracy: savedHouse.accuracyMeters };
+    } catch (err: any) {
+      console.error('Failed to lock current location:', err);
+      return {
+        success: false,
+        error: err.message || 'Gagal mengunci GPS. Pastikan izin lokasi HP aktif.',
+      };
+    }
+  };
+
   const handleMovePackage = (index: number, direction: 'up' | 'down') => {
     if (
       (direction === 'up' && index === 0) ||
@@ -401,6 +471,7 @@ export function App() {
             dropPointLng={settings.dropPointLng}
             savedHouses={savedHouses}
             onSaveHousePoint={handleOpenSaveHouseForPkg}
+            onQuickPinGps={handleQuickPinGps}
           />
         )}
 
@@ -414,6 +485,7 @@ export function App() {
             dropPointLng={settings.dropPointLng}
             savedHouses={savedHouses}
             onSaveHousePoint={handleOpenSaveHouseForPkg}
+            onQuickPinGps={handleQuickPinGps}
           />
         )}
 
@@ -539,6 +611,7 @@ export function App() {
           setIsSaveHouseOpen(true);
         }}
         onDeleteHouse={handleHouseDeleted}
+        onQuickPinCurrentLocation={handleQuickPinCurrentLocation}
       />
     </div>
   );

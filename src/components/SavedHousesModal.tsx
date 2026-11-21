@@ -13,6 +13,7 @@ import {
   Maximize2,
   Compass,
   Check,
+  RefreshCw,
 } from 'lucide-react';
 import type { SavedHousePoint } from '../types';
 
@@ -23,6 +24,7 @@ interface SavedHousesModalProps {
   onAddNew: () => void;
   onEditHouse: (house: SavedHousePoint) => void;
   onDeleteHouse: (id: string) => void;
+  onQuickPinCurrentLocation?: () => Promise<{ success: boolean; accuracy?: number; error?: string }>;
 }
 
 export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
@@ -32,12 +34,31 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
   onAddNew,
   onEditHouse,
   onDeleteHouse,
+  onQuickPinCurrentLocation,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [zoomedPhoto, setZoomedPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [isPinningSpot, setIsPinningSpot] = useState(false);
+  const [pinSuccessToast, setPinSuccessToast] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handlePinCurrentSpot = async () => {
+    if (!onQuickPinCurrentLocation || isPinningSpot) return;
+    setIsPinningSpot(true);
+    setPinSuccessToast(null);
+
+    const res = await onQuickPinCurrentLocation();
+    setIsPinningSpot(false);
+
+    if (res.success) {
+      setPinSuccessToast(`📍 Titik GPS berhasil dicatat ke buku rumah! (Akurasi: ±${Math.round(res.accuracy || 4)}m)`);
+      setTimeout(() => setPinSuccessToast(null), 4000);
+    } else {
+      alert(res.error || 'Gagal mengunci GPS. Pastikan izin lokasi HP aktif.');
+    }
+  };
 
   // Extract unique areas/dusuns
   const areas = Array.from(
@@ -157,6 +178,50 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Quick GPS Pin Banner (Sedang Berdiri di Lokasi) */}
+        {onQuickPinCurrentLocation && (
+          <div className="mx-4 sm:mx-6 mt-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-[22px] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-xs text-emerald-950">
+                  Sedang Berada di Depan Rumah Customer?
+                </h4>
+                <p className="text-[11px] text-emerald-800/80">
+                  1-Tap untuk mencatat titik koordinat GPS posisi Anda berdiri saat ini tanpa perlu foto.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handlePinCurrentSpot}
+              disabled={isPinningSpot}
+              className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-bold text-xs px-4 py-2.5 rounded-full transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            >
+              {isPinningSpot ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Mengunci GPS...</span>
+                </>
+              ) : (
+                <>
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Kunci Titik Saya Sekarang 📍</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {pinSuccessToast && (
+          <div className="mx-4 sm:mx-6 mt-2 p-3 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-semibold flex items-center gap-2 animate-pulse">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{pinSuccessToast}</span>
+          </div>
+        )}
 
         {/* List of Saved Houses */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-3.5 text-xs">

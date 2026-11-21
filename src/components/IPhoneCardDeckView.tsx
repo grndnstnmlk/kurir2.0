@@ -17,6 +17,8 @@ import {
   Moon,
   Home,
   Camera,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
@@ -32,6 +34,7 @@ interface IPhoneCardDeckViewProps {
   dropPointLng?: number;
   savedHouses?: SavedHousePoint[];
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
+  onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
 }
 
 export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
@@ -44,10 +47,36 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   dropPointLng = 113.4493,
   savedHouses = [],
   onSaveHousePoint,
+  onQuickPinGps,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true); // Default dark AMOLED matching Refero screenshot
+  const [isPinningGps, setIsPinningGps] = useState(false);
+  const [pinToast, setPinToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const handleQuickPin = async (pkg: DeliveryPackage) => {
+    if (!onQuickPinGps || isPinningGps) return;
+    setIsPinningGps(true);
+    setPinToast(null);
+
+    const res = await onQuickPinGps(pkg);
+    setIsPinningGps(false);
+
+    if (res.success) {
+      setPinToast({
+        type: 'success',
+        text: `📍 Titik Lokasi Berhasil Dikunci! (Akurasi: ±${Math.round(res.accuracy || 4)}m)`,
+      });
+      setTimeout(() => setPinToast(null), 4000);
+    } else {
+      setPinToast({
+        type: 'error',
+        text: res.error || 'Gagal mengunci GPS. Pastikan izin lokasi HP aktif.',
+      });
+      setTimeout(() => setPinToast(null), 4000);
+    }
+  };
 
   // Keyboard navigation for desktop testing (Left/Right arrows)
   useEffect(() => {
@@ -395,33 +424,74 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           </a>
         </div>
 
-        {/* 6b. Catat Titik Rumah & Tambah Foto Action */}
-        {onSaveHousePoint && (
-          <div className="pt-2.5 z-10">
-            <button
-              onClick={() => onSaveHousePoint(currentPkg)}
-              className={`w-full py-3 px-4 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 border ${
-                matchingHouse
-                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/50 hover:bg-amber-400/30'
-                  : isDarkMode
-                  ? 'bg-neutral-900/90 hover:bg-neutral-800 text-neutral-200 border-neutral-800'
-                  : 'bg-white hover:bg-neutral-100 text-neutral-800 border-[#e4e4e7]'
+        {/* 6b. 1-Tap Kunci Titik Lokasi & Tambah Foto Action */}
+        <div className="pt-2.5 z-10 space-y-2">
+          {/* Toast Notification */}
+          {pinToast && (
+            <div
+              className={`p-2.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm ${
+                pinToast.type === 'success'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
+                  : 'bg-red-500/20 text-red-300 border border-red-500/50'
               }`}
             >
-              {matchingHouse ? (
+              {pinToast.type === 'success' ? (
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              )}
+              <span>{pinToast.text}</span>
+            </div>
+          )}
+
+          {/* Primary Action: 1-Tap Instant GPS Point Recorder */}
+          {onQuickPinGps && (
+            <button
+              onClick={() => handleQuickPin(currentPkg)}
+              disabled={isPinningGps}
+              className={`w-full py-3.5 px-4 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95 border ${
+                matchingHouse
+                  ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-950/40'
+              }`}
+            >
+              {isPinningGps ? (
                 <>
-                  <Home className="w-4 h-4 text-amber-400" />
-                  <span>🏡 Titik Rumah Tersimpan {matchingHouse.photoUrl ? '(Ada Foto)' : ''}</span>
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                  <span>Sedang Mengunci Titik GPS Anda...</span>
+                </>
+              ) : matchingHouse ? (
+                <>
+                  <MapPin className="w-4 h-4 text-emerald-400" />
+                  <span>📍 Perbarui Titik GPS ke Posisi Saya Sekarang</span>
                 </>
               ) : (
                 <>
-                  <Camera className="w-4 h-4 text-amber-400" />
-                  <span>📍 Catat Titik Rumah & Tambah Foto</span>
+                  <MapPin className="w-4 h-4 text-white" />
+                  <span>📍 Kunci Titik Lokasi Saya (1-Tap)</span>
                 </>
               )}
             </button>
-          </div>
-        )}
+          )}
+
+          {/* Secondary Action: Optional Photo / Edit Benchmark */}
+          {onSaveHousePoint && (
+            <div className="flex items-center justify-between px-2 text-[11px]">
+              <span className="text-neutral-400">
+                {matchingHouse
+                  ? `✅ Titik tersimpan (Akurasi: ±${Math.round(matchingHouse.accuracyMeters || 4)}m)`
+                  : 'Cukup 1-klik tanpa ketik atau foto'}
+              </span>
+              <button
+                onClick={() => onSaveHousePoint(currentPkg)}
+                className="font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer transition"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>{matchingHouse?.photoUrl ? 'Lihat/Ganti Foto' : '+ Tambah Foto/Ciri'}</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* 7. Bottom Action Link: "View in AR" Position -> "Tandai Paket Terkirim" */}
         <div className="flex flex-col items-center justify-center pt-3 pb-2 z-10 gap-2">

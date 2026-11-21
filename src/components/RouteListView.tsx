@@ -11,6 +11,9 @@ import {
   MapPin,
   DollarSign,
   Home,
+  RefreshCw,
+  Check,
+  Camera,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
@@ -25,6 +28,7 @@ interface RouteListViewProps {
   dropPointLng?: number;
   savedHouses?: SavedHousePoint[];
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
+  onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
 }
 
 export const RouteListView: React.FC<RouteListViewProps> = ({
@@ -36,8 +40,24 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   dropPointLng = 113.4493,
   savedHouses = [],
   onSaveHousePoint,
+  onQuickPinGps,
 }) => {
   const [filter, setFilter] = React.useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
+  const [pinningPkgId, setPinningPkgId] = React.useState<string | null>(null);
+  const [pinnedPkgId, setPinnedPkgId] = React.useState<string | null>(null);
+
+  const handleQuickPin = async (pkg: DeliveryPackage) => {
+    if (!onQuickPinGps || pinningPkgId) return;
+    setPinningPkgId(pkg.id);
+    const res = await onQuickPinGps(pkg);
+    setPinningPkgId(null);
+    if (res.success) {
+      setPinnedPkgId(pkg.id);
+      setTimeout(() => setPinnedPkgId(null), 3500);
+    } else {
+      alert(res.error || 'Gagal mengunci GPS. Pastikan izin lokasi HP aktif.');
+    }
+  };
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -228,7 +248,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                   </div>
                 )}
 
-                {/* Actions: Dark Pill & Light Pill Buttons */}
+                {/* Row 1 Actions: Maps, Chat WA, Telp */}
                 <div className="grid grid-cols-3 gap-2.5 pt-1">
                   <a
                     href={getSingleNavigationUrl(pkg.lat, pkg.lng, pkg.fullAddress)}
@@ -255,19 +275,67 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                     <Phone className="w-3.5 h-3.5 text-[#222222]" />
                     <span>Telp</span>
                   </a>
+                </div>
+
+                {/* Row 2: 1-Tap Instant GPS Pinning & Optional Detail/Photo */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
+                  {onQuickPinGps && (
+                    <button
+                      onClick={() => handleQuickPin(pkg)}
+                      disabled={pinningPkgId === pkg.id}
+                      className={`flex-1 flex items-center justify-center gap-1.5 font-bold text-xs py-2 px-3 rounded-full transition cursor-pointer border active:scale-95 ${
+                        pinnedPkgId === pkg.id
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                          : matchingHouse
+                          ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                      }`}
+                    >
+                      {pinningPkgId === pkg.id ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Mengunci GPS...</span>
+                        </>
+                      ) : pinnedPkgId === pkg.id ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-white" />
+                          <span>✅ Titik Terkunci!</span>
+                        </>
+                      ) : matchingHouse ? (
+                        <>
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>📍 Perbarui Titik GPS Saya</span>
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="w-3.5 h-3.5 text-white" />
+                          <span>📍 Kunci Titik Lokasi Ini (1-Tap)</span>
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   {onSaveHousePoint && (
                     <button
                       onClick={() => onSaveHousePoint(pkg)}
-                      title="Catat titik GPS & foto rumah pelanggan ini"
-                      className={`flex items-center justify-center gap-1.5 font-medium text-xs py-2.5 px-3 rounded-full transition cursor-pointer border ${
+                      title="Lihat patokan atau tambahkan foto rumah"
+                      className={`flex items-center justify-center gap-1.5 font-medium text-xs py-2 px-3 rounded-full transition cursor-pointer border shrink-0 ${
                         matchingHouse
                           ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 font-bold'
                           : 'bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] border-[#e4e4e7]'
                       }`}
                     >
-                      <Home className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{matchingHouse ? '🏡 Titik Rumah' : '📍 Catat Rumah'}</span>
+                      {matchingHouse?.photoUrl ? (
+                        <>
+                          <Home className="w-3.5 h-3.5 text-amber-600" />
+                          <span>🏡 Lihat Foto ({matchingHouse.recipientName.slice(0, 10)})</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-3.5 h-3.5 text-[#696969]" />
+                          <span>+ Foto / Ciri</span>
+                        </>
+                      )}
                     </button>
                   )}
                 </div>

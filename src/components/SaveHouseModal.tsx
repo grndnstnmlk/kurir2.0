@@ -59,8 +59,13 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
         setLat(initialData.lat || -7.2255);
         setLng(initialData.lng || 113.4492);
         setAccuracy(initialData.accuracyMeters);
+        // Otomatis kunci GPS jika belum ada akurasi
+        if (!initialData.accuracyMeters) {
+          handleFetchCurrentGps();
+        }
       } else {
         resetForm();
+        handleFetchCurrentGps();
       }
       setFeedback(null);
     }
@@ -91,12 +96,12 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
       setAccuracy(loc.accuracy);
       setFeedback({
         type: 'success',
-        text: `📍 GPS berhasil dikunci! (Akurasi: ±${Math.round(loc.accuracy || 5)} meter)`,
+        text: `📍 GPS berhasil dikunci di posisi Anda! (Akurasi: ±${Math.round(loc.accuracy || 4)} meter)`,
       });
     } catch (err: any) {
       setFeedback({
         type: 'error',
-        text: 'Gagal mengunci GPS. Pastikan izin lokasi di HP sudah diaktifkan.',
+        text: 'Gagal mengunci GPS. Pastikan izin lokasi (GPS) di HP sudah aktif.',
       });
     }
     setIsGettingGps(false);
@@ -114,24 +119,21 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
     setIsProcessingPhoto(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!recipientName.trim()) {
-      alert('Mohon isi nama customer / pemilik rumah.');
-      return;
-    }
-    if (!fullAddress.trim()) {
-      alert('Mohon isi alamat rumah.');
-      return;
-    }
+  const handleQuickSavePointOnly = () => {
+    const finalName = recipientName.trim() || initialData?.recipientName || 'Titik Lokasi Pelanggan';
+    const finalAddress =
+      fullAddress.trim() ||
+      initialData?.fullAddress ||
+      areaOrStreet.trim() ||
+      `Titik GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
 
     const houseToSave: SavedHousePoint = {
       id: initialData?.id || `house-${Date.now()}`,
-      recipientName: recipientName.trim(),
+      recipientName: finalName,
       recipientPhone: recipientPhone.trim(),
-      fullAddress: fullAddress.trim(),
-      areaOrStreet: areaOrStreet.trim() || fullAddress.slice(0, 30),
-      benchmark: benchmark.trim(),
+      fullAddress: finalAddress,
+      areaOrStreet: areaOrStreet.trim() || 'Branta Pamekasan',
+      benchmark: benchmark.trim() || 'Titik dikunci langsung di lokasi kurir',
       notes: notes.trim(),
       photoUrl,
       lat,
@@ -144,6 +146,11 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
     saveHousePoint(houseToSave);
     onSaved(houseToSave);
     onClose();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleQuickSavePointOnly();
   };
 
   return (
@@ -191,6 +198,27 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
             </div>
           )}
 
+          {/* Quick 1-Click Save Current GPS Point */}
+          <div className="bg-emerald-50 border border-emerald-300 rounded-[22px] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div>
+              <div className="flex items-center gap-1.5 text-emerald-950 font-bold text-xs">
+                <MapPin className="w-4 h-4 text-emerald-600" />
+                <span>Hanya Ingin Mencatat Titiknya Saja?</span>
+              </div>
+              <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                Cukup 1-klik untuk merekam titik lokasi di mana Anda berdiri saat ini. Tidak perlu foto atau isi data lain.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleQuickSavePointOnly}
+              className="bg-[#080808] hover:bg-neutral-800 active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-full transition shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Simpan Titik Ini Saja 📍</span>
+            </button>
+          </div>
+
           {/* Section: GPS Location Locking */}
           <div className="bg-white p-4 rounded-[22px] border border-[#e4e4e7] shadow-2xs space-y-2.5">
             <div className="flex items-center justify-between">
@@ -215,12 +243,12 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
             </div>
           </div>
 
-          {/* Section: Foto Rumah Pelanggan */}
+          {/* Section: Foto Rumah Pelanggan (Opsional) */}
           <div className="bg-white p-4 rounded-[22px] border border-[#e4e4e7] shadow-2xs space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-[#080808]" />
-                <span className="font-bold text-[#080808]">Foto Tampak Depan / Gerbang Rumah</span>
+                <span className="font-bold text-[#080808]">Foto Tampak Depan / Gerbang (Opsional)</span>
               </div>
               {photoUrl && (
                 <button
@@ -260,7 +288,7 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
             ) : (
               <div className="border border-dashed border-[#d4d4d8] rounded-2xl p-5 text-center bg-[#fafafa] space-y-2.5">
                 <p className="text-[11px] text-[#696969]">
-                  Ambil foto gerbang, pagar, atau warna pintu rumah agar mudah diingat saat pengiriman berikutnya.
+                  Boleh difoto atau dilewati (opsional). Foto mempermudah kurir lain atau Anda saat kirim lagi.
                 </p>
                 <div className="flex items-center justify-center gap-2">
                   <label className="bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-bold text-xs px-4 py-2 rounded-full cursor-pointer transition shadow-sm flex items-center gap-1.5">
@@ -300,13 +328,12 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
           {/* Form Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[#696969] font-medium mb-1">Nama Customer / Pemilik Rumah:</label>
+              <label className="block text-[#696969] font-medium mb-1">Nama Customer / Pemilik (Opsional):</label>
               <input
                 type="text"
                 value={recipientName}
                 onChange={(e) => setRecipientName(e.target.value)}
                 placeholder="Misal: Bu Luluk / Pak Rais"
-                required
                 className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-4 py-2.5 text-xs text-[#080808] font-semibold focus:outline-none focus:border-black"
               />
             </div>
@@ -348,13 +375,12 @@ export const SaveHouseModal: React.FC<SaveHouseModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-[#696969] font-medium mb-1">Alamat Lengkap:</label>
+            <label className="block text-[#696969] font-medium mb-1">Alamat / Keterangan (Opsional):</label>
             <textarea
               rows={2}
               value={fullAddress}
               onChange={(e) => setFullAddress(e.target.value)}
-              placeholder="Alamat lengkap rumah..."
-              required
+              placeholder="Alamat lengkap atau patokan lokasi..."
               className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-2xl px-4 py-2 text-xs text-[#080808] focus:outline-none focus:border-black"
             />
           </div>

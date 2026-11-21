@@ -197,6 +197,61 @@ export function getCurrentGpsLocation(): Promise<{ lat: number; lng: number; acc
 }
 
 /**
+ * Catat titik GPS instan saat kurir berdiri di lokasi (1-tap, tanpa modal/form/foto)
+ * Memperbarui data titik rumah dan menyimpannya langsung ke LocalStorage
+ */
+export async function quickRecordCurrentGpsPoint(
+  pkg?: Partial<DeliveryPackage>,
+  customLabel?: string
+): Promise<{ savedHouse: SavedHousePoint; updatedList: SavedHousePoint[] }> {
+  const loc = await getCurrentGpsLocation();
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+  const currentHouses = getSavedHousePoints();
+  const matched = pkg ? findMatchingHouse(currentHouses, pkg) : undefined;
+
+  const houseId = matched?.id || (pkg?.id ? `house-pkg-${pkg.id}` : `house-gps-${Date.now()}`);
+  
+  const recipientName =
+    pkg?.recipientName?.trim() ||
+    customLabel?.trim() ||
+    matched?.recipientName ||
+    `Titik Lokasi (${dateStr}, ${timeStr})`;
+
+  const fullAddress =
+    pkg?.fullAddress?.trim() ||
+    matched?.fullAddress ||
+    pkg?.areaOrStreet ||
+    `Titik GPS (${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)})`;
+
+  const areaOrStreet =
+    pkg?.areaOrStreet?.trim() ||
+    matched?.areaOrStreet ||
+    'Branta Pamekasan';
+
+  const newHousePoint: SavedHousePoint = {
+    id: houseId,
+    recipientName,
+    recipientPhone: pkg?.recipientPhone?.trim() || matched?.recipientPhone || '',
+    fullAddress,
+    areaOrStreet,
+    benchmark: matched?.benchmark || 'Titik dikunci instan di lokasi kurir (1-tap)',
+    photoUrl: matched?.photoUrl,
+    lat: loc.lat,
+    lng: loc.lng,
+    accuracyMeters: loc.accuracy,
+    notes: matched?.notes || `Dikunci langsung pada ${dateStr} jam ${timeStr} (Akurasi: ±${Math.round(loc.accuracy || 4)}m)`,
+    savedAt: matched?.savedAt || now.toISOString(),
+    deliveryCount: (matched?.deliveryCount || 0) + 1,
+  };
+
+  const updatedList = saveHousePoint(newHousePoint);
+  return { savedHouse: newHousePoint, updatedList };
+}
+
+/**
  * Mencocokkan paket pengantaran dengan database titik rumah tersimpan
  * Cek berdasarkan: Nama mirip, No HP sama, atau jarak koordinat sangat dekat (< 50m)
  */
