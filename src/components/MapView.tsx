@@ -1,21 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import type { DeliveryPackage, CourierSettings } from '../types';
+import type { DeliveryPackage, CourierSettings, SavedHousePoint } from '../types';
 import {
   getSingleNavigationUrl,
   calculateTotalRouteDistanceKm,
   calculateEstimatedTravelTime,
 } from '../utils/routeOptimizer';
-import { Compass, CheckCircle2 } from 'lucide-react';
+import { Compass, CheckCircle2, Home } from 'lucide-react';
 
 interface MapViewProps {
   packages: DeliveryPackage[];
   settings: CourierSettings;
+  savedHouses?: SavedHousePoint[];
 }
 
 export const MapView: React.FC<MapViewProps> = ({
   packages,
   settings,
+  savedHouses = [],
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -146,6 +148,41 @@ export const MapView: React.FC<MapViewProps> = ({
       latLngs.push([pkg.lat, pkg.lng]);
     });
 
+    // Saved Customer House Markers (🏡 Amber Icon)
+    if (savedHouses && savedHouses.length > 0) {
+      savedHouses.forEach((house) => {
+        const houseIcon = L.divIcon({
+          className: 'custom-house-marker',
+          html: `
+            <div style="background: #d97706; color: #ffffff; border: 2px solid #ffffff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: rgba(0,0,0,0.25) 0 3px 6px; cursor: pointer;">
+              🏡
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+        });
+
+        const houseMarker = L.marker([house.lat, house.lng], {
+          icon: houseIcon,
+        }).bindPopup(`
+          <div style="font-family: system-ui, sans-serif; padding: 4px; min-width: 170px; color: #222222;">
+            ${house.photoUrl ? `<img src="${house.photoUrl}" style="width: 100%; height: 95px; object-fit: cover; border-radius: 12px; margin-bottom: 6px; border: 1px solid #e4e4e7;" />` : ''}
+            <b style="color: #080808; font-size: 13px;">🏡 ${house.recipientName}</b>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #696969;">${house.areaOrStreet}</p>
+            ${house.benchmark ? `<div style="margin-top: 5px; font-size: 11px; background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 8px;"><b>Patokan:</b> ${house.benchmark}</div>` : ''}
+            ${house.notes ? `<p style="margin-top: 4px; font-size: 10px; color: #696969; font-style: italic;">"${house.notes}"</p>` : ''}
+            <div style="margin-top: 8px;">
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${house.lat},${house.lng}" target="_blank" style="display: block; text-align: center; background: #080808; color: #ffffff; padding: 5px 10px; border-radius: 999px; text-decoration: none; font-size: 11px; font-weight: bold;">
+                Buka di Google Maps 🧭
+              </a>
+            </div>
+          </div>
+        `);
+
+        markersLayer.addLayer(houseMarker);
+      });
+    }
+
     if (latLngs.length > 1) {
       const polyline = L.polyline(latLngs, {
         color: '#292929',
@@ -158,7 +195,7 @@ export const MapView: React.FC<MapViewProps> = ({
       const bounds = L.latLngBounds(latLngs);
       map.fitBounds(bounds, { padding: [40, 40] });
     }
-  }, [packages, settings]);
+  }, [packages, settings, savedHouses]);
 
   const handleCenterMap = () => {
     if (!mapInstanceRef.current) return;
@@ -200,6 +237,10 @@ export const MapView: React.FC<MapViewProps> = ({
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#696969] inline-block"></span>
             <span className="text-[#696969]">Terkirim</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[12px]">🏡</span>
+            <span className="text-amber-800 font-semibold">{savedHouses.length} Titik Rumah</span>
           </div>
         </div>
 

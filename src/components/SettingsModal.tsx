@@ -10,6 +10,7 @@ interface SettingsModalProps {
   onResetData: () => void;
   onLoadSampleData: () => void;
   onOpenSubscription?: () => void;
+  onOpenHousesDirectory?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -20,6 +21,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetData,
   onLoadSampleData,
   onOpenSubscription,
+  onOpenHousesDirectory,
 }) => {
   const [courierName, setCourierName] = useState(settings.courierName);
   const [dropPointName, setDropPointName] = useState(settings.dropPointName);
@@ -265,9 +267,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* Kelola Lisensi Pengguna */}
-          {onOpenSubscription && (
-            <div className="pt-3 border-t border-[#e4e4e7]">
+          {/* Buku Titik Rumah & Lisensi */}
+          <div className="pt-3 border-t border-[#e4e4e7] space-y-2">
+            {onOpenHousesDirectory && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenHousesDirectory();
+                }}
+                className="w-full py-2.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#080808] font-bold text-xs border border-[#e4e4e7] cursor-pointer shadow-2xs active:scale-95 transition flex items-center justify-center gap-2"
+              >
+                <span>🏡 Buka Buku Titik Rumah Pelanggan</span>
+              </button>
+            )}
+
+            {onOpenSubscription && (
               <button
                 type="button"
                 onClick={() => {
@@ -278,8 +293,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 <span>💎 Status Lisensi & Masa Aktif</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="pt-2 flex items-center gap-2.5">
             <button

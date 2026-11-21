@@ -5,6 +5,7 @@ import {
   ShieldCheck,
   Lock,
   Key,
+  Home,
 } from 'lucide-react';
 import type { LocalLicenseInfo } from '../utils/licenseManager';
 import { getDaysRemaining, isLicenseValid } from '../utils/licenseManager';
@@ -19,6 +20,8 @@ interface HeaderProps {
   license: LocalLicenseInfo | null;
   onOpenSubscription: () => void;
   onOpenAdminPanel: () => void;
+  onOpenHousesDirectory?: () => void;
+  savedHousesCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
   license,
   onOpenSubscription,
   onOpenAdminPanel,
+  onOpenHousesDirectory,
+  savedHousesCount = 0,
 }) => {
   const isDarkTab = activeTab === 'deck';
   const [clickCount, setClickCount] = useState(0);
@@ -116,6 +121,23 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Lock className="w-3.5 h-3.5 text-red-600" />
               <span>Aktivasi</span>
+            </button>
+          )}
+
+          {onOpenHousesDirectory && (
+            <button
+              onClick={onOpenHousesDirectory}
+              title="Buku Catatan Titik Rumah Pelanggan"
+              className={`flex items-center gap-1.5 active:scale-95 font-medium text-xs py-1.5 px-3 rounded-full transition shadow-xs cursor-pointer border ${isDarkTab
+                  ? 'bg-neutral-900 hover:bg-neutral-800 text-amber-400 border-neutral-700'
+                  : 'bg-white hover:bg-neutral-100 text-[#080808] border-[#e4e4e7]'
+                }`}
+            >
+              <Home className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hidden sm:inline">Titik Rumah</span>
+              <span className="font-bold text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.2 rounded-full">
+                {savedHousesCount}
+              </span>
             </button>
           )}
 

@@ -62,3 +62,20 @@ export interface DailyHistoryEntry {
   archivedAt: string;
   notes?: string;
 }
+
+export interface SavedHousePoint {
+  id: string;
+  recipientName: string;
+  recipientPhone: string;
+  fullAddress: string;
+  areaOrStreet: string;
+  benchmark: string; // Ciri khas rumah / patokan
+  photoUrl?: string; // Foto tampak depan rumah (Base64 JPEG ringan)
+  lat: number;
+  lng: number;
+  accuracyMeters?: number;
+  notes?: string; // Catatan khusus kurir (misal: "Orangnya melaut pagi, titip Bu RT")
+  savedAt: string;
+  updatedAt?: string;
+  deliveryCount?: number;
+}

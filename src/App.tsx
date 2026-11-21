@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { DeliveryPackage, CourierSettings, PackageStatus, RouteStrategy, DailyHistoryEntry } from './types';
+import type { DeliveryPackage, CourierSettings, PackageStatus, RouteStrategy, DailyHistoryEntry, SavedHousePoint } from './types';
 import { DEFAULT_SETTINGS, INITIAL_SAMPLE_PACKAGES, INITIAL_SAMPLE_HISTORY } from './utils/sampleData';
 import { optimizeDeliveryRoute, getMultiStopNavigationUrl } from './utils/routeOptimizer';
 import { Header } from './components/Header';
@@ -13,6 +13,13 @@ import { HistoryView } from './components/HistoryView';
 import { SettingsModal } from './components/SettingsModal';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { AdminLicenseModal } from './components/AdminLicenseModal';
+import { SaveHouseModal } from './components/SaveHouseModal';
+import { SavedHousesModal } from './components/SavedHousesModal';
+import {
+  getSavedHousePoints,
+  saveHousePoint,
+  deleteHousePoint,
+} from './utils/houseManager';
 import {
   getLocalLicense,
   syncLicenseWithCloud,
@@ -30,6 +37,12 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+  // Titik Rumah Pelanggan (House Location Memory Book)
+  const [savedHouses, setSavedHouses] = useState<SavedHousePoint[]>(() => getSavedHousePoints());
+  const [isSaveHouseOpen, setIsSaveHouseOpen] = useState(false);
+  const [selectedHouseForEdit, setSelectedHouseForEdit] = useState<Partial<SavedHousePoint> | null>(null);
+  const [isHousesDirectoryOpen, setIsHousesDirectoryOpen] = useState(false);
 
   // Status Lisensi Pengguna
   const [license, setLicense] = useState<LocalLicenseInfo | null>(() => getLocalLicense());
@@ -197,6 +210,29 @@ export function App() {
     );
   };
 
+  const handleOpenSaveHouseForPkg = (pkg: DeliveryPackage) => {
+    setSelectedHouseForEdit({
+      recipientName: pkg.recipientName,
+      recipientPhone: pkg.recipientPhone,
+      fullAddress: pkg.fullAddress,
+      areaOrStreet: pkg.areaOrStreet,
+      benchmark: pkg.benchmark,
+      lat: pkg.lat,
+      lng: pkg.lng,
+    });
+    setIsSaveHouseOpen(true);
+  };
+
+  const handleHouseSaved = (house: SavedHousePoint) => {
+    const updated = saveHousePoint(house);
+    setSavedHouses(updated);
+  };
+
+  const handleHouseDeleted = (id: string) => {
+    const updated = deleteHousePoint(id);
+    setSavedHouses(updated);
+  };
+
   const handleMovePackage = (index: number, direction: 'up' | 'down') => {
     if (
       (direction === 'up' && index === 0) ||
@@ -326,6 +362,8 @@ export function App() {
         license={license}
         onOpenSubscription={() => setIsSubscriptionOpen(true)}
         onOpenAdminPanel={() => setIsAdminOpen(true)}
+        onOpenHousesDirectory={() => setIsHousesDirectoryOpen(true)}
+        savedHousesCount={savedHouses.length}
       />
 
       {/* Stats Bar shown only on route list and map tabs */}
@@ -361,6 +399,8 @@ export function App() {
             onOpenMapTab={() => setActiveTab('map')}
             dropPointLat={settings.dropPointLat}
             dropPointLng={settings.dropPointLng}
+            savedHouses={savedHouses}
+            onSaveHousePoint={handleOpenSaveHouseForPkg}
           />
         )}
 
@@ -372,6 +412,8 @@ export function App() {
             whatsAppTemplate={settings.customWhatsAppTemplate}
             dropPointLat={settings.dropPointLat}
             dropPointLng={settings.dropPointLng}
+            savedHouses={savedHouses}
+            onSaveHousePoint={handleOpenSaveHouseForPkg}
           />
         )}
 
@@ -379,6 +421,7 @@ export function App() {
           <MapView
             packages={packages}
             settings={settings}
+            savedHouses={savedHouses}
           />
         )}
 
@@ -453,6 +496,7 @@ export function App() {
         onResetData={handleResetData}
         onLoadSampleData={handleLoadSampleData}
         onOpenSubscription={() => setIsSubscriptionOpen(true)}
+        onOpenHousesDirectory={() => setIsHousesDirectoryOpen(true)}
       />
 
       {/* Subscription & License Gatekeeper Modal */}
@@ -468,6 +512,33 @@ export function App() {
       <AdminLicenseModal
         isOpen={isAdminOpen}
         onClose={handleCloseAdmin}
+      />
+
+      {/* Catat Titik & Foto Rumah Modal */}
+      <SaveHouseModal
+        isOpen={isSaveHouseOpen}
+        onClose={() => {
+          setIsSaveHouseOpen(false);
+          setSelectedHouseForEdit(null);
+        }}
+        initialData={selectedHouseForEdit}
+        onSaved={handleHouseSaved}
+      />
+
+      {/* Buku Katalog Titik Rumah Pelanggan */}
+      <SavedHousesModal
+        isOpen={isHousesDirectoryOpen}
+        onClose={() => setIsHousesDirectoryOpen(false)}
+        houses={savedHouses}
+        onAddNew={() => {
+          setSelectedHouseForEdit(null);
+          setIsSaveHouseOpen(true);
+        }}
+        onEditHouse={(house) => {
+          setSelectedHouseForEdit(house);
+          setIsSaveHouseOpen(true);
+        }}
+        onDeleteHouse={handleHouseDeleted}
       />
     </div>
   );

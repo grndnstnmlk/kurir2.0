@@ -10,9 +10,11 @@ import {
   ChevronDown,
   MapPin,
   DollarSign,
+  Home,
 } from 'lucide-react';
-import type { DeliveryPackage, PackageStatus } from '../types';
+import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
+import { findMatchingHouse } from '../utils/houseManager';
 
 interface RouteListViewProps {
   packages: DeliveryPackage[];
@@ -21,6 +23,8 @@ interface RouteListViewProps {
   whatsAppTemplate: string;
   dropPointLat?: number;
   dropPointLng?: number;
+  savedHouses?: SavedHousePoint[];
+  onSaveHousePoint?: (pkg: DeliveryPackage) => void;
 }
 
 export const RouteListView: React.FC<RouteListViewProps> = ({
@@ -30,6 +34,8 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   whatsAppTemplate,
   dropPointLat = -7.2107,
   dropPointLng = 113.4493,
+  savedHouses = [],
+  onSaveHousePoint,
 }) => {
   const [filter, setFilter] = React.useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
 
@@ -136,6 +142,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
           const isProblem = pkg.status === 'rescheduled' || pkg.status === 'failed';
           const prevPkg = originalIndex > 0 ? packages[originalIndex - 1] : null;
           const legInfo = getStopLegInfo(pkg, prevPkg, dropPointLat, dropPointLng);
+          const matchingHouse = savedHouses ? findMatchingHouse(savedHouses, pkg) : undefined;
 
           return (
             <div
@@ -173,9 +180,16 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                         </span>
                       )}
                     </div>
-                    <h3 className="text-lg font-medium text-[#080808] tracking-[-0.015em] mt-0.5">
-                      {pkg.recipientName}
-                    </h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <h3 className="text-lg font-medium text-[#080808] tracking-[-0.015em]">
+                        {pkg.recipientName}
+                      </h3>
+                      {matchingHouse && (
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                          🏡 {matchingHouse.photoUrl ? 'Ada Foto' : 'Titik GPS'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -241,6 +255,21 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                     <Phone className="w-3.5 h-3.5 text-[#222222]" />
                     <span>Telp</span>
                   </a>
+
+                  {onSaveHousePoint && (
+                    <button
+                      onClick={() => onSaveHousePoint(pkg)}
+                      title="Catat titik GPS & foto rumah pelanggan ini"
+                      className={`flex items-center justify-center gap-1.5 font-medium text-xs py-2.5 px-3 rounded-full transition cursor-pointer border ${
+                        matchingHouse
+                          ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                          : 'bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] border-[#e4e4e7]'
+                      }`}
+                    >
+                      <Home className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{matchingHouse ? '🏡 Titik Rumah' : '📍 Catat Rumah'}</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Status Toggle Bar */}

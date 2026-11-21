@@ -15,9 +15,12 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  Home,
+  Camera,
 } from 'lucide-react';
-import type { DeliveryPackage, PackageStatus } from '../types';
+import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
+import { findMatchingHouse } from '../utils/houseManager';
 
 interface IPhoneCardDeckViewProps {
   packages: DeliveryPackage[];
@@ -27,6 +30,8 @@ interface IPhoneCardDeckViewProps {
   onOpenMapTab: () => void;
   dropPointLat?: number;
   dropPointLng?: number;
+  savedHouses?: SavedHousePoint[];
+  onSaveHousePoint?: (pkg: DeliveryPackage) => void;
 }
 
 export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
@@ -37,6 +42,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   onOpenMapTab,
   dropPointLat = -7.2107,
   dropPointLng = 113.4493,
+  savedHouses = [],
+  onSaveHousePoint,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -82,6 +89,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const currentPkg = packages[safeIndex];
   const prevPkg = safeIndex > 0 ? packages[safeIndex - 1] : null;
   const legInfo = getStopLegInfo(currentPkg, prevPkg, dropPointLat, dropPointLng);
+  const matchingHouse = currentPkg ? findMatchingHouse(savedHouses, currentPkg) : undefined;
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -235,17 +243,34 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
             {/* Middle inside Card: Delivery Recipient & Destination Preview Graphic */}
             <div className="my-3 py-2 flex flex-col items-center text-center justify-center relative">
-              {/* Illustrated Delivery Parcel Box Representation */}
+              {/* Illustrated Delivery Parcel Box Representation / Real House Photo */}
               <div className="relative mb-2">
-                <div className="w-24 h-24 bg-neutral-100 rounded-3xl border border-neutral-200/80 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
-                  <div className="absolute top-0 inset-x-0 h-1.5 bg-red-600" />
-                  <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-1 text-neutral-800 border border-neutral-200">
-                    <MapPin className="w-5 h-5 text-red-600 stroke-[2.2]" />
+                {matchingHouse?.photoUrl ? (
+                  <div
+                    onClick={() => onSaveHousePoint && onSaveHousePoint(currentPkg)}
+                    className="w-24 h-24 rounded-3xl border-2 border-amber-400 flex flex-col items-center justify-center shadow-md relative overflow-hidden group cursor-pointer"
+                    title="Titik rumah tersimpan! Klik untuk lihat foto & patokan"
+                  >
+                    <img
+                      src={matchingHouse.photoUrl}
+                      alt="Foto Rumah"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    <div className="absolute bottom-1 bg-black/75 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span>🏡 Rumah</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-neutral-700 tracking-tighter">
-                    {currentPkg.areaOrStreet.slice(0, 14)}
-                  </span>
-                </div>
+                ) : (
+                  <div className="w-24 h-24 bg-neutral-100 rounded-3xl border border-neutral-200/80 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-1.5 bg-red-600" />
+                    <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-1 text-neutral-800 border border-neutral-200">
+                      <MapPin className="w-5 h-5 text-red-600 stroke-[2.2]" />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-neutral-700 tracking-tighter">
+                      {currentPkg.areaOrStreet.slice(0, 14)}
+                    </span>
+                  </div>
+                )}
 
                 {/* Status Dot */}
                 <span
@@ -369,6 +394,34 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             <span>Buka Maps</span>
           </a>
         </div>
+
+        {/* 6b. Catat Titik Rumah & Tambah Foto Action */}
+        {onSaveHousePoint && (
+          <div className="pt-2.5 z-10">
+            <button
+              onClick={() => onSaveHousePoint(currentPkg)}
+              className={`w-full py-3 px-4 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 border ${
+                matchingHouse
+                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/50 hover:bg-amber-400/30'
+                  : isDarkMode
+                  ? 'bg-neutral-900/90 hover:bg-neutral-800 text-neutral-200 border-neutral-800'
+                  : 'bg-white hover:bg-neutral-100 text-neutral-800 border-[#e4e4e7]'
+              }`}
+            >
+              {matchingHouse ? (
+                <>
+                  <Home className="w-4 h-4 text-amber-400" />
+                  <span>🏡 Titik Rumah Tersimpan {matchingHouse.photoUrl ? '(Ada Foto)' : ''}</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-4 h-4 text-amber-400" />
+                  <span>📍 Catat Titik Rumah & Tambah Foto</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* 7. Bottom Action Link: "View in AR" Position -> "Tandai Paket Terkirim" */}
         <div className="flex flex-col items-center justify-center pt-3 pb-2 z-10 gap-2">

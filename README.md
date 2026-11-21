@@ -52,3 +52,9 @@ Aplikasi saat ini sudah aktif di komputer Anda:
    * **Kata Sandi Standar:** `admin331` (bisa diganti kapan saja dari dalam panel).
    * **Fungsi:** Membuat kode aktivasi lisensi 30 hari (Rp 100.000), memantau daftar pengguna di database Supabase, dan membuat format pesan serah-terima kode untuk dikirim ke pembeli via WhatsApp.
    * **Keamanan:** Tombol panel ini disembunyikan sepenuhnya dari menu pengaturan kurir biasa agar aman dan eksklusif untuk Anda sebagai pemilik aplikasi.
+
+9. 🏡 **Fitur Buku Titik & Foto Rumah Pelanggan (Ingat Lokasi & Gang)**
+   * **Kunci Koordinat GPS Presisi:** Saat tiba di depan rumah customer, klik tombol **"Kunci GPS Saya Saat Ini 📍"** untuk merekam titik akurat hingga toleransi meter.
+   * **Foto Rumah / Gerbang:** Ambil foto depan rumah customer langsung lewat kamera HP. Foto otomatis dikompres sangat ringan (~60 KB) sehingga muat ratusan foto tanpa bikin lemot HP.
+   * **Deteksi Otomatis:** Saat menerima paket untuk pelanggan yang sama di hari berikutnya, aplikasi otomatis mengenali dan memunculkan foto rumah & patokan langsung di kartu pengantaran.
+   * **Tampil di Peta:** Titik rumah tersimpan ditandai dengan pin 🏡 khusus di peta rute pengantaran.
