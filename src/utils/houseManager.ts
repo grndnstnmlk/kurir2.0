@@ -1,5 +1,6 @@
 import type { SavedHousePoint, DeliveryPackage } from '../types';
 import { supabase } from './supabaseClient';
+import { getActiveSessionId } from './cloudSyncManager';
 
 const STORAGE_KEY_SAVED_HOUSES = 'kurir2_saved_house_points';
 
@@ -70,33 +71,53 @@ export function getSavedHousePoints(): SavedHousePoint[] {
 /**
  * Menyimpan atau memperbarui data titik rumah
  */
-export function saveHousePoint(house: SavedHousePoint): SavedHousePoint[] {
+export function saveHousePoint(house: SavedHousePoint, sessionId?: string): SavedHousePoint[] {
   try {
     const current = getSavedHousePoints();
     const existingIndex = current.findIndex((h) => h.id === house.id);
     let updated: SavedHousePoint[];
 
+    const finalHouse: SavedHousePoint = existingIndex >= 0
+      ? { ...house, updatedAt: new Date().toISOString() }
+      : { ...house, savedAt: house.savedAt || new Date().toISOString(), deliveryCount: (house.deliveryCount || 0) + 1 };
+
     if (existingIndex >= 0) {
       updated = [...current];
-      updated[existingIndex] = {
-        ...house,
-        updatedAt: new Date().toISOString(),
-      };
+      updated[existingIndex] = finalHouse;
     } else {
-      updated = [
-        {
-          ...house,
-          savedAt: house.savedAt || new Date().toISOString(),
-          deliveryCount: (house.deliveryCount || 0) + 1,
-        },
-        ...current,
-      ];
+      updated = [finalHouse, ...current];
     }
 
     localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(updated));
 
-    // Sinkronisasi background otomatis ke cloud Supabase (jika online & tabel sudah dibuat)
-    syncHousesWithSupabase().catch(() => {});
+    // Langsung upsert ke Cloud Supabase agar perangkat lain (PC / iPhone) langsung menerima pembaruan
+    const activeSession = sessionId || getActiveSessionId();
+    const singlePayload = {
+      id: finalHouse.id,
+      session_id: activeSession,
+      recipient_name: finalHouse.recipientName,
+      recipient_phone: finalHouse.recipientPhone || '',
+      full_address: finalHouse.fullAddress,
+      area_or_street: finalHouse.areaOrStreet || '',
+      benchmark: finalHouse.benchmark || '',
+      photo_url: finalHouse.photoUrl || null,
+      lat: finalHouse.lat,
+      lng: finalHouse.lng,
+      accuracy_meters: finalHouse.accuracyMeters || null,
+      notes: finalHouse.notes || '',
+      saved_at: finalHouse.savedAt,
+      delivery_count: finalHouse.deliveryCount || 1,
+    };
+
+    Promise.resolve(
+      supabase
+        .from('saved_houses')
+        .upsert(singlePayload, { onConflict: 'id' })
+    )
+      .then(({ error }) => {
+        if (error) console.warn('Supabase single house push warning:', error.message);
+      })
+      .catch((e: any) => console.warn('Supabase single house push error:', e));
 
     return updated;
   } catch (err) {
@@ -108,7 +129,7 @@ export function saveHousePoint(house: SavedHousePoint): SavedHousePoint[] {
 /**
  * Sinkronisasi data titik rumah lokal ke Cloud Supabase
  */
-export async function syncHousesWithSupabase(): Promise<{
+export async function syncHousesWithSupabase(sessionId?: string): Promise<{
   success: boolean;
   count: number;
   error?: string;
@@ -117,17 +138,20 @@ export async function syncHousesWithSupabase(): Promise<{
     const localHouses = getSavedHousePoints();
     if (localHouses.length === 0) return { success: true, count: 0 };
 
+    const activeSession = sessionId || getActiveSessionId();
+
     const payload = localHouses.map((h) => ({
       id: h.id,
+      session_id: activeSession,
       recipient_name: h.recipientName,
       recipient_phone: h.recipientPhone,
       full_address: h.fullAddress,
       area_or_street: h.areaOrStreet,
       benchmark: h.benchmark,
-      photo_url: h.photoUrl,
+      photo_url: h.photoUrl || null,
       lat: h.lat,
       lng: h.lng,
-      accuracy_meters: h.accuracyMeters,
+      accuracy_meters: h.accuracyMeters || null,
       notes: h.notes,
       saved_at: h.savedAt,
       delivery_count: h.deliveryCount || 1,
@@ -148,28 +172,36 @@ export async function syncHousesWithSupabase(): Promise<{
 }
 
 /**
- * Mengambil data titik rumah dari Cloud Supabase (untuk pulihkan data di HP baru)
+ * Mengambil data titik rumah dari Cloud Supabase (untuk sinkronisasi PC & iPhone)
  */
-export async function fetchHousesFromSupabase(): Promise<{
+export async function fetchHousesFromSupabase(sessionId?: string): Promise<{
   success: boolean;
   houses?: SavedHousePoint[];
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase
+    const activeSession = sessionId || getActiveSessionId();
+    let query = supabase
       .from('saved_houses')
       .select('*')
       .order('saved_at', { ascending: false });
+
+    if (activeSession) {
+      query = query.or(`session_id.eq.${activeSession},session_id.is.null`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return { success: false, error: error.message };
     }
 
     if (!data || data.length === 0) {
-      return { success: true, houses: [] };
+      const localHouses = getSavedHousePoints();
+      return { success: true, houses: localHouses };
     }
 
-    const mapped: SavedHousePoint[] = data.map((r: any) => ({
+    const remoteHouses: SavedHousePoint[] = data.map((r: any) => ({
       id: r.id,
       recipientName: r.recipient_name,
       recipientPhone: r.recipient_phone || '',
@@ -177,29 +209,58 @@ export async function fetchHousesFromSupabase(): Promise<{
       areaOrStreet: r.area_or_street || '',
       benchmark: r.benchmark || '',
       photoUrl: r.photo_url || undefined,
-      lat: r.lat,
-      lng: r.lng,
-      accuracyMeters: r.accuracy_meters || undefined,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      accuracyMeters: r.accuracy_meters ? Number(r.accuracy_meters) : undefined,
       notes: r.notes || '',
       savedAt: r.saved_at || new Date().toISOString(),
       deliveryCount: r.delivery_count || 1,
     }));
 
-    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(mapped));
-    return { success: true, houses: mapped };
+    // Gabungkan dengan data lokal (merge) agar tidak ada data yang hilang
+    const localHouses = getSavedHousePoints();
+    const map = new Map<string, SavedHousePoint>();
+    
+    // Utamakan remote houses yang tersimpan di Cloud Supabase
+    remoteHouses.forEach((h) => map.set(h.id, h));
+    
+    // Pertahankan titik rumah lokal jika ada yang belum terunggah
+    localHouses.forEach((h) => {
+      if (!map.has(h.id)) {
+        map.set(h.id, h);
+      }
+    });
+
+    const merged: SavedHousePoint[] = Array.from(map.values()).sort(
+      (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+    );
+
+    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(merged));
+    return { success: true, houses: merged };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Gagal memuat dari cloud' };
   }
 }
 
 /**
- * Menghapus titik rumah berdasarkan ID
+ * Menghapus titik rumah berdasarkan ID (Lokal & Supabase Cloud)
  */
 export function deleteHousePoint(id: string): SavedHousePoint[] {
   try {
     const current = getSavedHousePoints();
     const updated = current.filter((h) => h.id !== id);
     localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(updated));
+
+    // Hapus juga di cloud Supabase
+    Promise.resolve(
+      supabase
+        .from('saved_houses')
+        .delete()
+        .eq('id', id)
+    )
+      .then(() => {})
+      .catch((err: any) => console.warn('Failed to delete house on cloud:', err));
+
     return updated;
   } catch (err) {
     console.error('Failed to delete house point:', err);

@@ -164,6 +164,39 @@ export function subscribeToSessionRealtime(
 }
 
 /**
+ * Berlangganan Realtime Supabase untuk Buku Titik Rumah (saved_houses)
+ * Saat iPhone mengunci titik GPS rumah, PC langsung menerima dan menampilkan titik tersebut secara instan!
+ */
+export function subscribeToSavedHousesRealtime(
+  sessionId: string,
+  onRemoteChange: () => void
+) {
+  try {
+    const channel = supabase
+      .channel(`houses-realtime-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'saved_houses',
+        },
+        () => {
+          onRemoteChange();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  } catch (err) {
+    console.warn('Failed to subscribe to saved_houses realtime channel:', err);
+    return () => {};
+  }
+}
+
+/**
  * Menyimpan rekap riwayat harian ke Supabase (Unified History)
  */
 export async function pushHistoryEntryToCloud(

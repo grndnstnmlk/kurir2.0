@@ -23,6 +23,7 @@ import {
   saveHousePoint,
   deleteHousePoint,
   quickRecordCurrentGpsPoint,
+  fetchHousesFromSupabase,
 } from './utils/houseManager';
 import {
   getLocalLicense,
@@ -36,6 +37,7 @@ import {
   pushSessionToCloud,
   fetchSessionFromCloud,
   subscribeToSessionRealtime,
+  subscribeToSavedHousesRealtime,
   pushHistoryEntryToCloud,
   fetchHistoryFromCloud,
   deleteHistoryFromCloud,
@@ -105,7 +107,14 @@ export function App() {
       }
     });
 
-    // 3. Berlangganan Realtime Supabase
+    // 3. Ambil data buku titik rumah dari Supabase (PC & iPhone otomatis sinkron)
+    fetchHousesFromSupabase(sessionId).then((res) => {
+      if (res.success && res.houses && res.houses.length > 0) {
+        setSavedHouses(res.houses);
+      }
+    });
+
+    // 4. Berlangganan Realtime Supabase (Paket & Pengaturan)
     const unsubscribe = subscribeToSessionRealtime(sessionId, (remotePkgs, remoteSettings) => {
       setPackages((curr) => {
         if (JSON.stringify(curr) === JSON.stringify(remotePkgs)) return curr;
@@ -116,8 +125,18 @@ export function App() {
       }
     });
 
+    // 5. Berlangganan Realtime Supabase untuk Titik Rumah (saved_houses)
+    const unsubHouses = subscribeToSavedHousesRealtime(sessionId, () => {
+      fetchHousesFromSupabase(sessionId).then((res) => {
+        if (res.success && res.houses) {
+          setSavedHouses(res.houses);
+        }
+      });
+    });
+
     return () => {
       unsubscribe();
+      unsubHouses();
     };
   }, [sessionId]);
 
@@ -311,8 +330,15 @@ export function App() {
   };
 
   const handleHouseSaved = (house: SavedHousePoint) => {
-    const updated = saveHousePoint(house);
+    const updated = saveHousePoint(house, sessionId);
     setSavedHouses(updated);
+  };
+
+  const handleRefreshHousesFromCloud = async () => {
+    const res = await fetchHousesFromSupabase(sessionId);
+    if (res.success && res.houses) {
+      setSavedHouses(res.houses);
+    }
   };
 
   const handleHouseDeleted = (id: string) => {
@@ -774,6 +800,7 @@ export function App() {
         }}
         onDeleteHouse={handleHouseDeleted}
         onQuickPinCurrentLocation={handleQuickPinCurrentLocation}
+        onRefreshHouses={handleRefreshHousesFromCloud}
       />
 
       {/* Tautkan Sesi Realtime PC & iPhone Modal */}

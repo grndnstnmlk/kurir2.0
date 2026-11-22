@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home,
   Search,
@@ -27,6 +27,7 @@ interface SavedHousesModalProps {
   onEditHouse: (house: SavedHousePoint) => void;
   onDeleteHouse: (id: string) => void;
   onQuickPinCurrentLocation?: () => Promise<{ success: boolean; accuracy?: number; error?: string }>;
+  onRefreshHouses?: () => Promise<void>;
 }
 
 export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
@@ -37,14 +38,37 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
   onEditHouse,
   onDeleteHouse,
   onQuickPinCurrentLocation,
+  onRefreshHouses,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [zoomedPhoto, setZoomedPhoto] = useState<{ url: string; title: string } | null>(null);
   const [isPinningSpot, setIsPinningSpot] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinSuccessToast, setPinSuccessToast] = useState<string | null>(null);
 
+  // Otomatis tarik titik rumah terbaru dari cloud saat modal dibuka
+  useEffect(() => {
+    if (isOpen && onRefreshHouses) {
+      onRefreshHouses().catch(() => {});
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handleManualRefresh = async () => {
+    if (!onRefreshHouses || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefreshHouses();
+      setPinSuccessToast(`✅ Titik rumah berhasil disinkronkan dengan Cloud!`);
+      setTimeout(() => setPinSuccessToast(null), 3500);
+    } catch (err) {
+      console.error('Refresh error:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handlePinCurrentSpot = async () => {
     if (!onQuickPinCurrentLocation || isPinningSpot) return;
@@ -122,6 +146,18 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onRefreshHouses && (
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                title="Tarik & Sinkronkan Titik Rumah dari Cloud (iPhone / PC)"
+                className="p-2 rounded-full hover:bg-[#f4f4f5] text-[#080808] border border-[#e4e4e7] transition cursor-pointer flex items-center justify-center shadow-2xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+
             <button
               onClick={() => exportAppBackup()}
               title="Cadangkan (Backup) seluruh data titik rumah ke file"
