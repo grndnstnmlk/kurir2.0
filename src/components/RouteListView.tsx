@@ -17,6 +17,7 @@ import {
   Layers,
   ListOrdered,
   CheckCheck,
+  RotateCcw,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import {
@@ -59,7 +60,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   onEditPackage,
   onQuickEditPhone,
 }) => {
-  const [filter, setFilter] = useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'delivered' | 'problem' | 'returned'>('pending');
   const [groupMode, setGroupMode] = useState<'area' | 'sequence'>('area');
   const [pinningPkgId, setPinningPkgId] = useState<string | null>(null);
   const [pinnedPkgId, setPinnedPkgId] = useState<string | null>(null);
@@ -153,12 +154,14 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
     if (filter === 'pending') return p.status === 'pending';
     if (filter === 'delivered') return p.status === 'delivered';
     if (filter === 'problem') return p.status === 'rescheduled' || p.status === 'failed';
+    if (filter === 'returned') return p.status === 'returned';
     return true;
   });
 
   const renderPackageCard = (pkg: DeliveryPackage) => {
     const originalIndex = packages.findIndex((p) => p.id === pkg.id);
     const isDelivered = pkg.status === 'delivered';
+    const isReturned = pkg.status === 'returned';
     const isProblem = pkg.status === 'rescheduled' || pkg.status === 'failed';
     const prevPkg = originalIndex > 0 ? packages[originalIndex - 1] : null;
     const legInfo = getStopLegInfo(pkg, prevPkg, dropPointLat, dropPointLng);
@@ -170,6 +173,8 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
         className={`rounded-[28px] p-4 sm:p-5 transition-all shadow-subtle border ${
           isDelivered
             ? 'bg-[#fafafa] opacity-60 border-[#e4e4e7]'
+            : isReturned
+            ? 'bg-red-50/40 border-red-200'
             : isProblem
             ? 'bg-[#fafafa] border-[#b2b2b2]'
             : 'bg-[#fafafa] border-[#e4e4e7]/80'
@@ -178,7 +183,11 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
         {/* Card Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e4e4e7]">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#f4f4f5] text-[#080808] flex items-center justify-center font-bold text-xs tracking-tight border border-[#e4e4e7] shrink-0">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs tracking-tight shrink-0 border ${
+              isReturned
+                ? 'bg-red-600 text-white border-red-700'
+                : 'bg-[#f4f4f5] text-[#080808] border-[#e4e4e7]'
+            }`}>
               #{pkg.orderIndex}
             </div>
 
@@ -190,6 +199,24 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                 <span className="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   📍 {prevPkg ? `+${legInfo.text} dari Stop #${originalIndex}` : `+${legInfo.text} dari Gudang`}
                 </span>
+                {/* Badge Percobaan Pengantaran (1..3) */}
+                {(pkg.deliveryAttempts || 1) > 1 && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    (pkg.deliveryAttempts || 1) >= 3
+                      ? 'bg-red-100 text-red-800 border-red-300 animate-pulse'
+                      : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}>
+                    {(pkg.deliveryAttempts || 1) >= 3
+                      ? `⚠️ Percobaan ${(pkg.deliveryAttempts || 1)}/3 (Siap Retur)`
+                      : `🔄 Percobaan ke-${pkg.deliveryAttempts}/3`}
+                  </span>
+                )}
+                {/* Badge Retur */}
+                {isReturned && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white shadow-2xs">
+                    ↩ DIRETUR KE GUDANG {pkg.returnReason ? `(${pkg.returnReason})` : ''}
+                  </span>
+                )}
                 {pkg.isCod ? (
                   <div className="inline-flex items-center gap-1.5 flex-wrap">
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] text-[#fafafa]">
@@ -439,7 +466,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
             <button
               onClick={() => {
-                const reason = prompt('Alasan gagal / retur (RTS):', 'Customer menolak paket COD');
+                const reason = prompt('Alasan gagal / kendala lapangan:', 'Customer menolak paket COD');
                 if (reason !== null) {
                   onUpdateStatus(pkg.id, 'failed', reason);
                 }
@@ -452,6 +479,28 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
             >
               <XCircle className="w-3.5 h-3.5" />
               <span>Gagal</span>
+            </button>
+
+            <button
+              onClick={() => {
+                const defaultReason = 'Permintaan Penerima (Retur Saja)';
+                const reason = prompt(
+                  'Konfirmasi RETUR PAKET ke Drop Point / Gudang.\nMasukkan alasan retur:',
+                  defaultReason
+                );
+                if (reason !== null) {
+                  onUpdateStatus(pkg.id, 'returned', reason.trim() || defaultReason);
+                }
+              }}
+              className={`py-1.5 px-3 rounded-full font-medium flex items-center justify-center gap-1 transition cursor-pointer ${
+                pkg.status === 'returned'
+                  ? 'bg-red-600 text-white font-bold'
+                  : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+              }`}
+              title="Retur paket ini kembali ke Drop Point"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Retur</span>
             </button>
           </div>
         </div>
@@ -506,7 +555,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
         </div>
       </div>
 
-      {/* Pill Filter Strip: Belum Diantar, Semua, Terkirim, Kendala */}
+      {/* Pill Filter Strip: Belum Diantar, Semua, Terkirim, Kendala, Retur */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs font-medium">
         <button
           onClick={() => setFilter('pending')}
@@ -547,6 +596,16 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
           }`}
         >
           Kendala ({packages.filter((p) => p.status === 'rescheduled' || p.status === 'failed').length})
+        </button>
+        <button
+          onClick={() => setFilter('returned')}
+          className={`px-4 py-1.5 rounded-full whitespace-nowrap transition cursor-pointer ${
+            filter === 'returned'
+              ? 'bg-red-600 text-white font-bold'
+              : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+          }`}
+        >
+          Retur ({packages.filter((p) => p.status === 'returned').length})
         </button>
       </div>
 

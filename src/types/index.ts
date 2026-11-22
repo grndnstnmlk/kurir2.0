@@ -1,4 +1,4 @@
-export type PackageStatus = 'pending' | 'delivered' | 'rescheduled' | 'failed';
+export type PackageStatus = 'pending' | 'delivered' | 'rescheduled' | 'failed' | 'returned';
 
 export type RouteStrategy =
   | 'optimal-tsp'
@@ -24,6 +24,9 @@ export interface DeliveryPackage {
   orderIndex: number; // Urutan stop pengantaran (1, 2, 3...)
   createdAt: string;
   deliveredAt?: string;
+  returnedAt?: string;
+  returnReason?: string; // Misal: "Permintaan Pembeli (Retur Saja)" | "Ditolak / Batal Pesan" | "Tidak Merespon (3x Percobaan)"
+  deliveryAttempts?: number; // 1, 2, 3 (percobaan antaran)
 }
 
 export interface CourierSettings {
@@ -55,6 +58,7 @@ export interface DailyHistoryEntry {
   packages: DeliveryPackage[];
   totalPackages: number;
   deliveredCount: number;
+  returnedCount?: number;
   failedCount: number;
   rescheduledCount: number;
   codCollected: number;

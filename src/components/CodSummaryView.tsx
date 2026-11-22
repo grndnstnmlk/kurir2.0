@@ -93,7 +93,7 @@ export const CodSummaryView: React.FC<CodSummaryViewProps> = ({
   const codPackages = packages.filter((p) => p.isCod);
   const deliveredCod = codPackages.filter((p) => p.status === 'delivered');
   const pendingCod = codPackages.filter((p) => p.status === 'pending');
-  const failedCod = codPackages.filter((p) => p.status === 'rescheduled' || p.status === 'failed');
+  const failedCod = codPackages.filter((p) => p.status === 'rescheduled' || p.status === 'failed' || p.status === 'returned');
 
   // 1. Setoran ke Kantor J&T (Harga Asli Paket Tanpa Biaya Tambahan Kurir)
   const totalCollected = deliveredCod.reduce((sum, p) => sum + p.codAmount, 0);
@@ -240,8 +240,9 @@ ${items}
 📦 *RINGKASAN PAKET:*
 • Total Paket: ${packages.length}
 • Terkirim: ${packages.filter((p) => p.status === 'delivered').length}
-• Pending/Kosong: ${packages.filter((p) => p.status === 'rescheduled').length}
-• Gagal/Retur: ${packages.filter((p) => p.status === 'failed').length}
+• Pending/Kosong: ${packages.filter((p) => p.status === 'pending' || p.status === 'rescheduled').length}
+• Diretur: ${packages.filter((p) => p.status === 'returned').length}
+• Gagal: ${packages.filter((p) => p.status === 'failed').length}
 
 💰 *REKAP KASIR & ONGKIR KURIR:*
 • Total Paket COD Selesai: ${deliveredCod.length} paket

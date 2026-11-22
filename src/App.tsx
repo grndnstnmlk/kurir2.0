@@ -371,7 +371,13 @@ export function App() {
     setActiveTab('deck');
   };
 
-  const handleUpdateStatus = (id: string, status: PackageStatus, notes?: string) => {
+  const handleUpdateStatus = (
+    id: string,
+    status: PackageStatus,
+    notes?: string,
+    returnReason?: string
+  ) => {
+    const now = new Date().toISOString();
     setPackages((prev) =>
       prev.map((pkg) => {
         if (pkg.id === id) {
@@ -379,7 +385,12 @@ export function App() {
             ...pkg,
             status,
             statusNotes: notes !== undefined ? notes : pkg.statusNotes,
-            deliveredAt: status === 'delivered' ? new Date().toISOString() : undefined,
+            deliveredAt: status === 'delivered' ? now : undefined,
+            returnedAt: status === 'returned' ? now : undefined,
+            returnReason:
+              status === 'returned'
+                ? returnReason || notes || 'Permintaan Penerima (Retur Saja)'
+                : pkg.returnReason,
           };
         }
         return pkg;
@@ -702,15 +713,22 @@ export function App() {
       .filter((p) => p.isCod)
       .reduce((sum, p) => sum + p.codAmount, 0);
 
+    const deliveredCount = packages.filter((p) => p.status === 'delivered').length;
+    const returnedCount = packages.filter((p) => p.status === 'returned').length;
+    const failedCount = packages.filter((p) => p.status === 'failed').length;
+    const rescheduledCount = packages.filter((p) => p.status === 'rescheduled').length;
+
+    // 1. Simpan rekap riwayat pengantaran hari ini secara lengkap
     const newHistoryEntry: DailyHistoryEntry = {
       id: `history-${Date.now()}`,
       date: dateStr,
       displayDate,
       packages: [...packages],
       totalPackages: packages.length,
-      deliveredCount: packages.filter((p) => p.status === 'delivered').length,
-      failedCount: packages.filter((p) => p.status === 'failed').length,
-      rescheduledCount: packages.filter((p) => p.status === 'rescheduled').length,
+      deliveredCount,
+      returnedCount,
+      failedCount,
+      rescheduledCount,
       codCollected,
       totalCodTarget,
       archivedAt: now.toISOString(),
@@ -719,9 +737,35 @@ export function App() {
 
     setHistory((prev) => [newHistoryEntry, ...prev]);
     pushHistoryEntryToCloud(sessionId, newHistoryEntry);
-    setPackages([]);
-    pushSessionToCloud(sessionId, [], settings);
-    setActiveTab('history');
+
+    // 2. Filter untuk hari esoknya:
+    // Paket yang SUDAH TERKIRIM atau SUDAH DIRETUR tidak ditampilkan lagi.
+    // Paket yang BELUM TERKIRIM dibiarkan tetap ada untuk percobaan pengantaran berikutnya (maksimal 3x).
+    const remainingUnfinished = packages
+      .filter((p) => p.status !== 'delivered' && p.status !== 'returned')
+      .map((p, idx) => {
+        const attempts = (p.deliveryAttempts || 1) + 1;
+        return {
+          ...p,
+          status: 'pending' as PackageStatus,
+          deliveryAttempts: attempts,
+          orderIndex: idx + 1,
+          statusNotes:
+            attempts >= 3
+              ? `Percobaan ke-${attempts}/3 (Batas terakhir: Jika tidak ada respon, paket dapat diretur)`
+              : `Percobaan pengantaran ke-${attempts}/3`,
+        };
+      });
+
+    setPackages(remainingUnfinished);
+    pushSessionToCloud(sessionId, remainingUnfinished, settings);
+    try {
+      localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(remainingUnfinished));
+    } catch (e) {
+      console.error('Failed to save remaining packages:', e);
+    }
+
+    setActiveTab('deck');
   };
 
   const handleDeleteHistory = (id: string) => {

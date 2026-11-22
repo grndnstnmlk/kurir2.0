@@ -100,6 +100,11 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({
       status,
       statusNotes: statusNotes.trim() || undefined,
       deliveredAt: status === 'delivered' ? pkg.deliveredAt || new Date().toISOString() : undefined,
+      returnedAt: status === 'returned' ? pkg.returnedAt || new Date().toISOString() : undefined,
+      returnReason:
+        status === 'returned'
+          ? statusNotes.trim() || pkg.returnReason || 'Permintaan Penerima (Retur Saja)'
+          : pkg.returnReason,
       lat,
       lng,
     };
@@ -312,7 +317,7 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({
           {/* Status Antaran */}
           <div>
             <label className="block text-[#696969] font-medium mb-1.5">Status Pengantaran:</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => setStatus('pending')}
@@ -349,6 +354,19 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({
               >
                 <Clock className="w-3.5 h-3.5" />
                 <span>Kosong/Tunda</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatus('returned')}
+                className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border ${
+                  status === 'returned'
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-white hover:bg-red-50 text-red-700 border-red-200'
+                }`}
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Retur (RTS)</span>
               </button>
             </div>
           </div>

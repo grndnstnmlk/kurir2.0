@@ -74,6 +74,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [isDeliveringWithPhoto, setIsDeliveringWithPhoto] = useState(false);
   const [pinToast, setPinToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isBatchAreaOpen, setIsBatchAreaOpen] = useState(false);
+  const [filterPendingOnly, setFilterPendingOnly] = useState(false);
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const handleTriggerCamera = () => {
@@ -171,9 +172,17 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     );
   }
 
-  const safeIndex = Math.min(currentIndex, packages.length - 1);
-  const currentPkg = packages[safeIndex];
-  const prevPkg = safeIndex > 0 ? packages[safeIndex - 1] : null;
+  const activeUnfinishedPackages = packages.filter(
+    (p) => p.status !== 'delivered' && p.status !== 'returned'
+  );
+  const displayPackages =
+    filterPendingOnly && activeUnfinishedPackages.length > 0
+      ? activeUnfinishedPackages
+      : packages;
+
+  const safeIndex = Math.min(currentIndex, Math.max(0, displayPackages.length - 1));
+  const currentPkg = displayPackages[safeIndex];
+  const prevPkg = safeIndex > 0 ? displayPackages[safeIndex - 1] : null;
   const legInfo = getStopLegInfo(currentPkg, prevPkg, dropPointLat, dropPointLng);
   const matchingHouse = currentPkg ? findMatchingHouse(savedHouses, currentPkg) : undefined;
 
@@ -221,6 +230,39 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     window.open(`sms:${phone}?body=${encodeURIComponent(text)}`, '_blank');
   };
 
+  const handlePromptReturn = (pkg: DeliveryPackage) => {
+    if (pkg.status === 'returned') {
+      onUpdateStatus(pkg.id, 'pending');
+      setPinToast({
+        type: 'success',
+        text: `Status Paket #${pkg.orderIndex} dikembalikan ke Belum Diantar.`,
+      });
+      setTimeout(() => setPinToast(null), 3000);
+      return;
+    }
+
+    const reason = prompt(
+      `Penerima minta paket diretur?\nMasukkan alasan retur paket #${pkg.orderIndex} (${pkg.recipientName}):`,
+      'Permintaan Penerima (Retur Saja)'
+    );
+
+    if (reason !== null && reason.trim().length > 0) {
+      onUpdateStatus(pkg.id, 'returned', reason.trim());
+      setPinToast({
+        type: 'success',
+        text: `📦 Paket #${pkg.orderIndex} (${pkg.recipientName}) ditandai DIRETUR ke Drop Point!`,
+      });
+
+      // Otomatis geser ke kartu paket antaran berikutnya setelah 1.2 detik
+      setTimeout(() => {
+        if (safeIndex < displayPackages.length - 1) {
+          setCurrentIndex(safeIndex + 1);
+        }
+        setPinToast(null);
+      }, 1200);
+    }
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
   };
@@ -230,7 +272,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartX - touchEndX;
 
-    if (diff > 45 && safeIndex < packages.length - 1) {
+    if (diff > 45 && safeIndex < displayPackages.length - 1) {
       setCurrentIndex(safeIndex + 1);
     } else if (diff < -45 && safeIndex > 0) {
       setCurrentIndex(safeIndex - 1);
@@ -239,10 +281,11 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   };
 
   const isDelivered = currentPkg?.status === 'delivered';
+  const isReturned = currentPkg?.status === 'returned';
   const isProblem = currentPkg?.status === 'rescheduled' || currentPkg?.status === 'failed';
 
   const areaPkgs = currentPkg
-    ? packages.filter(
+    ? displayPackages.filter(
         (p) => (p.areaOrStreet || '').trim() === (currentPkg.areaOrStreet || '').trim()
       )
     : [];
@@ -296,27 +339,49 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             <h2 className={`text-base font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-neutral-900'}`}>
               Paket Antaran
             </h2>
-            <span className="text-[11px] text-neutral-400 block -mt-0.5">
-              Stop {safeIndex + 1} dari {packages.length}
-            </span>
+            <div className="flex items-center justify-center gap-1.5 -mt-0.5">
+              <span className="text-[11px] text-neutral-400">
+                Stop {safeIndex + 1} dari {displayPackages.length}
+              </span>
+              {packages.some((p) => p.status === 'delivered' || p.status === 'returned') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterPendingOnly(!filterPendingOnly);
+                    setCurrentIndex(0);
+                  }}
+                  className={`text-[9px] px-2 py-0.2 rounded-full font-bold border transition cursor-pointer ${
+                    filterPendingOnly
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                      : 'bg-neutral-800 text-neutral-400 border-neutral-700'
+                  }`}
+                  title="Fokus menampilkan paket yang belum selesai"
+                >
+                  {filterPendingOnly ? 'Fokus Sisa' : 'Semua Kartu'}
+                </button>
+              )}
+            </div>
           </div>
 
           <button
-            onClick={() =>
-              onUpdateStatus(
-                currentPkg.id,
-                currentPkg.status === 'delivered' ? 'pending' : 'delivered'
-              )
-            }
+            onClick={() => {
+              if (isDelivered || isReturned) {
+                onUpdateStatus(currentPkg.id, 'pending');
+              } else {
+                onUpdateStatus(currentPkg.id, 'delivered');
+              }
+            }}
             className={`text-sm font-semibold transition cursor-pointer px-2 py-1 rounded-full ${
               isDelivered
                 ? 'text-emerald-400 hover:text-emerald-300'
+                : isReturned
+                ? 'text-red-400 hover:text-red-300'
                 : isDarkMode
                 ? 'text-white hover:text-neutral-300'
                 : 'text-neutral-900 hover:text-neutral-600'
             }`}
           >
-            {isDelivered ? 'Terkirim ✓' : 'Selesai'}
+            {isDelivered ? 'Terkirim ✓' : isReturned ? 'Diretur ↩' : 'Selesai'}
           </button>
         </div>
 

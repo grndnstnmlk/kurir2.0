@@ -51,7 +51,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 • Total Paket: ${entry.totalPackages}
 • Terkirim: ${entry.deliveredCount}
 • Pending/Kosong: ${entry.rescheduledCount}
-• Gagal/Retur: ${entry.failedCount}
+• Diretur: ${entry.returnedCount || 0}
+• Gagal: ${entry.failedCount}
 
 💰 *TOTAL COD DISETOR:* *${formatRupiah(entry.codCollected)}*
 ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
@@ -69,14 +70,21 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
       return;
     }
 
+    const delivered = currentPackages.filter((p) => p.status === 'delivered').length;
+    const returned = currentPackages.filter((p) => p.status === 'returned').length;
+    const pending = currentPackages.filter((p) => p.status !== 'delivered' && p.status !== 'returned').length;
+
+    const confirmMsg = `Arsipkan pengantaran hari ini?\n\n• Selesai Terkirim: ${delivered} paket (disimpan ke arsip, selesai)\n• Selesai Diretur: ${returned} paket (disimpan ke arsip, selesai)\n• Belum Terkirim: ${pending} paket (akan diteruskan ke antaran besok, hitungan percobaan +1)\n\nLanjutkan arsip?`;
+    if (!window.confirm(confirmMsg)) return;
+
     const notes = prompt(
       'Masukkan catatan pengantaran hari ini (opsional):',
-      'Pengantaran hari ini lancar, setoran COD sudah diserahkan ke kasir.'
+      'Pengantaran hari ini selesai, setoran COD sudah diserahkan ke kasir.'
     );
 
     if (notes !== null) {
       onArchiveToday(notes);
-      alert('Berhasil! Paket hari ini telah diarsipkan ke Riwayat.');
+      alert('Berhasil! Paket selesai telah diarsipkan ke Riwayat. Paket yang belum terkirim otomatis diteruskan ke hari esok.');
     }
   };
 
@@ -150,7 +158,8 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
                     {entry.displayDate}
                   </h3>
                   <p className="text-xs text-[#696969] mt-0.5">
-                    {entry.totalPackages} Paket • {entry.deliveredCount} Terkirim • Setoran COD:{' '}
+                    {entry.totalPackages} Paket • {entry.deliveredCount} Terkirim
+                    {(entry.returnedCount || 0) > 0 ? ` • ${entry.returnedCount} Retur` : ''} • Setoran COD:{' '}
                     <strong className="text-[#080808]">{formatRupiah(entry.codCollected)}</strong>
                   </p>
                 </div>
@@ -187,9 +196,22 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
                     {entry.packages.map((pkg, idx) => (
                       <div key={pkg.id || idx} className="py-2.5 flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-[#080808]">{pkg.recipientName}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-[#080808]">{pkg.recipientName}</p>
+                            {pkg.status === 'returned' && (
+                              <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold">
+                                ↩ Retur
+                              </span>
+                            )}
+                            {pkg.status === 'delivered' && (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded font-bold">
+                                ✓ Terkirim
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-[#696969]">
                             {pkg.trackingNumber} • {pkg.areaOrStreet}
+                            {pkg.returnReason ? ` • (${pkg.returnReason})` : ''}
                           </p>
                         </div>
                         <span className="font-medium text-[#080808]">
