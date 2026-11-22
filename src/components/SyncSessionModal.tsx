@@ -32,8 +32,32 @@ export const SyncSessionModal: React.FC<SyncSessionModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-  const syncUrl = `${currentOrigin}/?session=${encodeURIComponent(currentSessionId)}`;
+  const getSyncUrl = (): string => {
+    if (typeof window === 'undefined') {
+      return `https://grndnstnmlk.github.io/kurir2.0/?session=${encodeURIComponent(currentSessionId)}`;
+    }
+
+    const { hostname, origin, pathname } = window.location;
+
+    // Jika dibuka di localhost di PC, iPhone tidak bisa membuka localhost -> arahkan langsung ke GitHub Pages live resmi
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `https://grndnstnmlk.github.io/kurir2.0/?session=${encodeURIComponent(currentSessionId)}`;
+    }
+
+    // Pastikan pathname (/kurir2.0/) tidak hilang saat di GitHub Pages
+    let basePath = pathname;
+    if (!basePath.endsWith('/')) {
+      basePath += '/';
+    }
+
+    if (!basePath.includes('kurir2.0') && origin.includes('github.io')) {
+      basePath = `/kurir2.0${basePath}`;
+    }
+
+    return `${origin}${basePath}?session=${encodeURIComponent(currentSessionId)}`;
+  };
+
+  const syncUrl = getSyncUrl();
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(
     syncUrl
   )}`;
@@ -144,6 +168,12 @@ export const SyncSessionModal: React.FC<SyncSessionModalProps> = ({
               <p className="text-xs text-[#696969] mt-0.5 max-w-xs">
                 iPhone Anda akan langsung membuka sesi yang sama persis dengan PC ini.
               </p>
+            </div>
+
+            {/* Direct URL text box */}
+            <div className="w-full bg-[#f4f4f5] px-3.5 py-2 rounded-xl text-[11px] font-mono text-neutral-700 break-all select-all border border-[#e4e4e7] text-left">
+              <span className="text-[10px] text-neutral-400 block font-sans">Alamat URL iPhone:</span>
+              <span className="font-semibold">{syncUrl}</span>
             </div>
 
             {/* Quick Action Buttons */}

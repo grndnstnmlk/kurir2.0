@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kurir 2.0 - Mengalihkan...</title>
+    <script>
+      // Single Page App redirect for GitHub Pages
+      // Jika pengunjung membuka root domain https://grndnstnmlk.github.io atau rute tanpa repo
+      var l = window.location;
+      var repoName = '/kurir2.0/';
+      
+      if (!l.pathname.startsWith(repoName)) {
+        var newUrl = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + repoName + l.search + l.hash;
+        window.location.replace(newUrl);
+      } else {
+        // Redirect query SPA
+        var path = l.pathname.slice(repoName.length);
+        window.location.replace(
+          l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + repoName + '?' +
+          (path ? 'p=' + encodeURIComponent(path) + '&' : '') +
+          l.search.slice(1) + l.hash
+        );
+      }
+    </script>
+  </head>
+  <body style="font-family: sans-serif; text-align: center; padding: 40px; color: #333;">
+    <p>Sedang membuka aplikasi <b>Kurir 2.0</b>...</p>
+    <p><a href="/kurir2.0/" style="color: #0066cc;">Klik di sini jika tidak otomatis dialihkan</a></p>
+  </body>
+</html>
