@@ -282,14 +282,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (confirm('Muat ulang 6 paket contoh realistis J&T?')) {
+                if (confirm('Muat ulang 36 paket antaran hari ini (22 November 2026)?')) {
                   onLoadSampleData();
                   onClose();
                 }
               }}
               className="px-4 py-2 rounded-full bg-[#f4f4f5] text-[#222222] font-medium transition cursor-pointer border border-[#e4e4e7]"
             >
-              Muat 6 Paket Contoh
+              Muat 36 Paket Hari Ini (22 Nov)
             </button>
 
             <button

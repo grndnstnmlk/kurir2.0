@@ -141,15 +141,19 @@ export function App() {
 
   const [strategy, setStrategy] = useState<RouteStrategy>(settings.defaultStrategy || 'optimal-tsp');
 
-  // Paket: Otomatis sinkronkan ke sampel Branta Pamekasan jika masih demo lama
+  // Paket: Otomatis sinkronkan ke 36 paket Branta 22 November jika masih demo lama atau data awal
   const [packages, setPackages] = useState<DeliveryPackage[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PACKAGES);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Jika masih sampel Menteng lama, perbarui ke Branta
-          if (parsed[0]?.fullAddress?.includes('Menteng')) {
+          // Jika masih sampel lama (<= 6 paket atau data dummy), perbarui ke 36 paket Branta 22 November
+          if (
+            parsed[0]?.fullAddress?.includes('Menteng') ||
+            parsed[0]?.id?.startsWith('pkg-branta-') ||
+            parsed.length <= 6
+          ) {
             return optimizeDeliveryRoute(
               INITIAL_SAMPLE_PACKAGES,
               DEFAULT_SETTINGS.dropPointLat,
@@ -634,7 +638,7 @@ export function App() {
                   onClick={handleLoadSampleData}
                   className="w-full py-3 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs rounded-full border border-[#e4e4e7] transition cursor-pointer"
                 >
-                  Muat Sampel Paket Branta Pamekasan
+                  Muat 36 Paket Hari Ini (22 November 2026)
                 </button>
               </div>
             </div>
