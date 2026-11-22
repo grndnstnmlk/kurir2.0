@@ -135,6 +135,12 @@ export function App() {
           if (!parsed.adminWhatsAppNumber || parsed.adminWhatsAppNumber.includes('1234567890')) {
             parsed.adminWhatsAppNumber = '6281295713923';
           }
+          if (parsed.customWhatsAppTemplate && parsed.customWhatsAppTemplate.includes('{RESI}')) {
+            parsed.customWhatsAppTemplate = parsed.customWhatsAppTemplate
+              .replace(/ No\.?\s*Resi\s*{RESI}/gi, '')
+              .replace(/{RESI}/g, '')
+              .trim();
+          }
           return parsed;
         }
       }
@@ -467,7 +473,8 @@ export function App() {
 
       let text = settings.customWhatsAppTemplate
         .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
-        .replace(/{RESI}/g, pkg.trackingNumber)
+        .replace(/ No\.?\s*Resi\s*{RESI}/gi, '')
+        .replace(/{RESI}/g, '')
         .replace(/{INFO_COD}/g, codInfo)
         .replace(/{ALAMAT}/g, pkg.fullAddress);
 

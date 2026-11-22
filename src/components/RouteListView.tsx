@@ -87,7 +87,8 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
     let text = whatsAppTemplate
       .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
-      .replace(/{RESI}/g, pkg.trackingNumber)
+      .replace(/ No\.?\s*Resi\s*{RESI}/gi, '')
+      .replace(/{RESI}/g, '')
       .replace(/{INFO_COD}/g, codInfo)
       .replace(/{ALAMAT}/g, pkg.fullAddress);
 
