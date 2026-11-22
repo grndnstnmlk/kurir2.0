@@ -181,19 +181,39 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[#696969] font-medium mb-1">
-                <span className="flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-neutral-500" />
-                  <span>No. WhatsApp / HP:</span>
-                </span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[#696969] font-medium">
+                  <span className="flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-neutral-500" />
+                    <span>No. WhatsApp / HP:</span>
+                  </span>
+                </label>
+                {recipientPhone.includes('*') && (
+                  <button
+                    type="button"
+                    onClick={() => setRecipientPhone('08')}
+                    className="text-[10px] text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md font-bold border border-amber-300 cursor-pointer"
+                  >
+                    Buka Sensor (Isi Baru)
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={recipientPhone}
                 onChange={(e) => setRecipientPhone(e.target.value)}
-                className="w-full bg-white border border-[#e4e4e7] rounded-xl px-3.5 py-2.5 text-xs font-mono text-[#080808] focus:outline-none focus:border-black"
+                className={`w-full bg-white border rounded-xl px-3.5 py-2.5 text-xs font-mono text-[#080808] focus:outline-none ${
+                  recipientPhone.includes('*')
+                    ? 'border-amber-400 bg-amber-50/40 focus:border-amber-600'
+                    : 'border-[#e4e4e7] focus:border-black'
+                }`}
                 placeholder="0812... / 628..."
               />
+              {recipientPhone.includes('*') && (
+                <p className="text-[10px] text-amber-700 font-medium mt-1">
+                  ⚠️ Nomor masih disensor di Sprinter ({recipientPhone}). Silakan isi nomor lengkap asli.
+                </p>
+              )}
             </div>
           </div>
 

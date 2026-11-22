@@ -31,6 +31,7 @@ interface RouteListViewProps {
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
   onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
   onEditPackage?: (pkg: DeliveryPackage) => void;
+  onQuickEditPhone?: (pkg: DeliveryPackage) => void;
 }
 
 export const RouteListView: React.FC<RouteListViewProps> = ({
@@ -44,6 +45,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   onSaveHousePoint,
   onQuickPinGps,
   onEditPackage,
+  onQuickEditPhone,
 }) => {
   const [filter, setFilter] = React.useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
   const [pinningPkgId, setPinningPkgId] = React.useState<string | null>(null);
@@ -71,6 +73,14 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   };
 
   const handleOpenWhatsApp = (pkg: DeliveryPackage) => {
+    // Jika nomor disensor oleh J&T Sprinter (mengandung bintang *) atau kurang dari 10 digit, buka modal pengisian nomor
+    if (pkg.recipientPhone?.includes('*') || (pkg.recipientPhone?.length || 0) < 10) {
+      if (onQuickEditPhone) {
+        onQuickEditPhone(pkg);
+        return;
+      }
+    }
+
     let codInfo = '';
     if (pkg.isCod && pkg.codAmount > 0) {
       codInfo = `🏷️ Paket COD (Bayar di Tempat): *${formatRupiah(pkg.codAmount)}* (Mohon siapkan uang pas ya Kak).`;
@@ -91,6 +101,16 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
+  };
+
+  const handleTelp = (pkg: DeliveryPackage) => {
+    if (pkg.recipientPhone?.includes('*') || (pkg.recipientPhone?.length || 0) < 10) {
+      if (onQuickEditPhone) {
+        onQuickEditPhone(pkg);
+        return;
+      }
+    }
+    window.location.href = `tel:${pkg.recipientPhone}`;
   };
 
   const filteredPackages = packages.filter((p) => {
@@ -203,7 +223,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
                       <h3 className="text-lg font-medium text-[#080808] tracking-[-0.015em]">
                         {pkg.recipientName}
                       </h3>
@@ -212,6 +232,33 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                           🏡 {matchingHouse.photoUrl ? 'Ada Foto' : 'Titik GPS'}
                         </span>
                       )}
+                    </div>
+                    {/* Nomor HP dengan Tombol Isi / Edit Nomor Sensor */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onQuickEditPhone
+                            ? onQuickEditPhone(pkg)
+                            : onEditPackage && onEditPackage(pkg)
+                        }
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono transition active:scale-95 cursor-pointer border ${
+                          pkg.recipientPhone?.includes('*')
+                            ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 font-bold'
+                            : 'bg-[#f4f4f5] text-[#222222] border-[#e4e4e7] hover:bg-[#e4e4e7]'
+                        }`}
+                        title="Klik untuk mengisi / mengedit nomor telepon pelanggan"
+                      >
+                        <Phone className="w-3 h-3 text-neutral-600" />
+                        <span>{pkg.recipientPhone || 'Belum ada nomor'}</span>
+                        {pkg.recipientPhone?.includes('*') ? (
+                          <span className="bg-amber-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-sans font-semibold">
+                            ✏️ Isi Nomor
+                          </span>
+                        ) : (
+                          <Edit3 className="w-2.5 h-2.5 text-neutral-400" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -282,13 +329,14 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                     <span>Chat WA</span>
                   </button>
 
-                  <a
-                    href={`tel:${pkg.recipientPhone}`}
-                    className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2.5 px-3 rounded-full transition text-center border border-[#e4e4e7]"
+                  <button
+                    type="button"
+                    onClick={() => handleTelp(pkg)}
+                    className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2.5 px-3 rounded-full transition text-center border border-[#e4e4e7] cursor-pointer"
                   >
                     <Phone className="w-3.5 h-3.5 text-[#222222]" />
                     <span>Telp</span>
-                  </a>
+                  </button>
                 </div>
 
                 {/* Row 2: 1-Tap Instant GPS Pinning & Optional Detail/Photo */}

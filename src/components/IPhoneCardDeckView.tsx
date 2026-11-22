@@ -20,6 +20,7 @@ import {
   RefreshCw,
   AlertCircle,
   Edit3,
+  Phone,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
@@ -37,6 +38,7 @@ interface IPhoneCardDeckViewProps {
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
   onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
   onEditPackage?: (pkg: DeliveryPackage) => void;
+  onQuickEditPhone?: (pkg: DeliveryPackage) => void;
 }
 
 export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
@@ -51,6 +53,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   onSaveHousePoint,
   onQuickPinGps,
   onEditPackage,
+  onQuickEditPhone,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -132,6 +135,14 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   };
 
   const handleOpenWhatsApp = (pkg: DeliveryPackage) => {
+    // Jika nomor disensor oleh J&T Sprinter (mengandung bintang *) atau kurang dari 10 digit, buka modal pengisian nomor
+    if (pkg.recipientPhone?.includes('*') || (pkg.recipientPhone?.length || 0) < 10) {
+      if (onQuickEditPhone) {
+        onQuickEditPhone(pkg);
+        return;
+      }
+    }
+
     let codInfo = '';
     if (pkg.isCod && pkg.codAmount > 0) {
       codInfo = `🏷️ Paket COD (Bayar di Tempat): *${formatRupiah(pkg.codAmount)}* (Mohon siapkan uang pas ya Kak).`;
@@ -332,9 +343,34 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
               <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-950 line-clamp-1">
                 {currentPkg.recipientName}
               </h3>
-              <p className="text-xs text-neutral-600 font-mono mt-0.5">
-                📞 {currentPkg.recipientPhone}
-              </p>
+              
+              {/* Phone display with high-affordance Quick Edit pill */}
+              <div className="flex items-center gap-2 mt-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onQuickEditPhone
+                      ? onQuickEditPhone(currentPkg)
+                      : onEditPackage && onEditPackage(currentPkg)
+                  }
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono transition active:scale-95 cursor-pointer border ${
+                    currentPkg.recipientPhone?.includes('*')
+                      ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 font-bold'
+                      : 'bg-neutral-100 text-neutral-800 border-neutral-300 hover:bg-neutral-200'
+                  }`}
+                  title="Klik untuk mengisi / mengedit nomor telepon pelanggan"
+                >
+                  <Phone className="w-3.5 h-3.5 text-neutral-700" />
+                  <span>{currentPkg.recipientPhone || 'Belum ada nomor'}</span>
+                  {currentPkg.recipientPhone?.includes('*') ? (
+                    <span className="bg-amber-600 text-white text-[10px] px-2 py-0.5 rounded-full font-sans font-bold shadow-2xs">
+                      ✏️ Isi No. HP
+                    </span>
+                  ) : (
+                    <Edit3 className="w-3 h-3 text-neutral-400" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Bottom inside Card: COD Tag / Non-COD Tag & Destination Area */}

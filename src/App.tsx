@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { DeliveryPackage, CourierSettings, PackageStatus, RouteStrategy, DailyHistoryEntry, SavedHousePoint } from './types';
 import { DEFAULT_SETTINGS, INITIAL_SAMPLE_PACKAGES, INITIAL_SAMPLE_HISTORY } from './utils/sampleData';
-import { optimizeDeliveryRoute, getMultiStopNavigationUrl } from './utils/routeOptimizer';
+import { optimizeDeliveryRoute, getMultiStopNavigationUrl, formatRupiah } from './utils/routeOptimizer';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { IPhoneCardDeckView } from './components/IPhoneCardDeckView';
@@ -17,6 +17,7 @@ import { SaveHouseModal } from './components/SaveHouseModal';
 import { SavedHousesModal } from './components/SavedHousesModal';
 import { SyncSessionModal } from './components/SyncSessionModal';
 import { EditPackageModal } from './components/EditPackageModal';
+import { QuickPhoneModal } from './components/QuickPhoneModal';
 import {
   getSavedHousePoints,
   saveHousePoint,
@@ -66,6 +67,10 @@ export function App() {
   const [isSyncSessionOpen, setIsSyncSessionOpen] = useState(false);
   const [editingPkg, setEditingPkg] = useState<DeliveryPackage | null>(null);
   const [isEditPkgOpen, setIsEditPkgOpen] = useState(false);
+
+  // Modal Cepat Pengisian Nomor HP Pelanggan (Buka Sensor Sprinter)
+  const [phoneEditPkg, setPhoneEditPkg] = useState<DeliveryPackage | null>(null);
+  const [isQuickPhoneOpen, setIsQuickPhoneOpen] = useState(false);
 
   useEffect(() => {
     // Kunci memori penyimpanan HP agar tidak dihapus otomatis oleh sistem Android/iOS
@@ -437,6 +442,45 @@ export function App() {
     setIsEditPkgOpen(true);
   };
 
+  const handleOpenQuickPhone = (pkg: DeliveryPackage) => {
+    setPhoneEditPkg(pkg);
+    setIsQuickPhoneOpen(true);
+  };
+
+  const handleSaveQuickPhone = (pkgId: string, newPhone: string, autoOpenWhatsApp: boolean = false) => {
+    let targetPkg: DeliveryPackage | null = null;
+    setPackages((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === pkgId) {
+          targetPkg = { ...p, recipientPhone: newPhone };
+          return targetPkg;
+        }
+        return p;
+      });
+      pushSessionToCloud(sessionId, updated, settings);
+      return updated;
+    });
+
+    if (autoOpenWhatsApp && targetPkg) {
+      const pkg = targetPkg as DeliveryPackage;
+      const codInfo = pkg.isCod && pkg.codAmount > 0
+        ? `🏷️ Paket COD (Bayar di Tempat): *${formatRupiah(pkg.codAmount)}* (Mohon siapkan uang pas ya Kak).`
+        : '🏷️ Paket Non-COD (Sudah Lunas, tinggal serah terima).';
+
+      let text = settings.customWhatsAppTemplate
+        .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
+        .replace(/{RESI}/g, pkg.trackingNumber)
+        .replace(/{INFO_COD}/g, codInfo)
+        .replace(/{ALAMAT}/g, pkg.fullAddress);
+
+      let phone = newPhone.replace(/\D/g, '');
+      if (phone.startsWith('08')) {
+        phone = '628' + phone.slice(2);
+      }
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+    }
+  };
+
   const handleSaveEditedPackage = (updatedPkg: DeliveryPackage) => {
     setPackages((prev) => {
       const next = prev.map((p) => (p.id === updatedPkg.id ? updatedPkg : p));
@@ -581,6 +625,7 @@ export function App() {
             onSaveHousePoint={handleOpenSaveHouseForPkg}
             onQuickPinGps={handleQuickPinGps}
             onEditPackage={handleOpenEditPackage}
+            onQuickEditPhone={handleOpenQuickPhone}
           />
         )}
 
@@ -596,6 +641,7 @@ export function App() {
             onSaveHousePoint={handleOpenSaveHouseForPkg}
             onQuickPinGps={handleQuickPinGps}
             onEditPackage={handleOpenEditPackage}
+            onQuickEditPhone={handleOpenQuickPhone}
           />
         )}
 
@@ -745,6 +791,18 @@ export function App() {
         onDeletePackage={handleDeleteSinglePackage}
         dropPointLat={settings.dropPointLat}
         dropPointLng={settings.dropPointLng}
+      />
+
+      {/* Modal Cepat Isi / Buka Sensor Nomor HP Pelanggan */}
+      <QuickPhoneModal
+        isOpen={isQuickPhoneOpen}
+        pkg={phoneEditPkg}
+        onClose={() => {
+          setIsQuickPhoneOpen(false);
+          setPhoneEditPkg(null);
+        }}
+        onSavePhone={handleSaveQuickPhone}
+        whatsAppTemplate={settings.customWhatsAppTemplate}
       />
     </div>
   );
