@@ -66,8 +66,9 @@ export function calculateCodWithCourierFee(
 }
 
 /**
- * Menghasilkan blok pesan info COD untuk template balasan WhatsApp:
- * Menambahkan biaya pengantaran kurir 10% dibulatkan ke ribuan terdekat.
+ * Menghasilkan blok pesan info COD untuk template balasan WhatsApp kepada pembeli/penerima:
+ * Hanya menampilkan TOTAL tagihan saja kepada pembeli (sudah termasuk biaya pengantaran kurir 10% dibulatkan ke ribuan)
+ * tanpa menampilkan rincian biaya ongkir kurir kepada pembeli.
  */
 export function formatCodWhatsAppInfo(
   isCod: boolean,
@@ -76,16 +77,12 @@ export function formatCodWhatsAppInfo(
   roundToThousands: boolean = true
 ): string {
   if (!isCod || codAmount <= 0) {
-    return '🏷️ *Paket Non-COD (Sudah Lunas)*\n(Tinggal serah terima paket).';
+    return '🏷️ *Paket Non-COD (Sudah Lunas)* (Tinggal serah terima paket).';
   }
 
   const calc = calculateCodWithCourierFee(codAmount, percentage, roundToThousands);
 
-  return `🏷️ *Paket COD (Bayar di Tempat):*
-• Harga Paket: ${calc.formattedBase}
-• Biaya Pengantaran Kurir: ${calc.formattedFee}
-👉 *Total Tagihan COD: ${calc.formattedTotal}*
-(Mohon siapkan uang pas ya Kak 🙏)`;
+  return `🏷️ *Paket COD (Bayar di Tempat):* *${calc.formattedTotal}* (Mohon siapkan uang pas ya Kak 🙏).`;
 }
 
 /**

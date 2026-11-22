@@ -276,6 +276,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(e) => setCustomWhatsAppTemplate(e.target.value)}
               className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-[16px] p-3 text-[#080808] font-mono text-xs focus:outline-none focus:border-[#292929]"
             />
+            <span className="text-[10px] text-[#696969] mt-1 block">
+              Variabel: {'{NAMA}'}, {'{RESI}'}, {'{INFO_COD}'} (hanya menampilkan total tagihan COD tanpa merinci biaya ongkir ke pembeli), {'{ALAMAT}'}.
+            </span>
           </div>
 
           <div className="pt-2 border-t border-[#e4e4e7] flex items-center justify-between gap-2">
