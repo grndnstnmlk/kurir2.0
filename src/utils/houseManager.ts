@@ -4,6 +4,32 @@ import { getActiveSessionId } from './cloudSyncManager';
 
 const STORAGE_KEY_SAVED_HOUSES = 'kurir2_saved_house_points';
 
+/**
+ * Menyimpan titik rumah ke LocalStorage dengan proteksi kuota 5MB browser.
+ * Jika memori penuh karena ukuran foto Base64, foto pada data lama otomatis disusutkan
+ * sementara seluruh metadata, koordinat GPS, dan patokan rumah tetap tersimpan 100%.
+ */
+export function saveHousesToLocalStorageSafely(houses: SavedHousePoint[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(houses));
+  } catch (quotaError) {
+    console.warn('LocalStorage quota exceeded with full photos, optimizing local cache...', quotaError);
+    try {
+      // Simpan foto hanya untuk 3 titik terbaru, sedangkan titik lainnya tetap aman di Cloud Supabase
+      const lightweight = houses.map((h, idx) => (idx < 3 ? h : { ...h, photoUrl: undefined }));
+      localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(lightweight));
+    } catch {
+      try {
+        // Jika masih penuh, simpan semua titik rumah & koordinat GPS tanpa foto di localStorage
+        const noPhotos = houses.map((h) => ({ ...h, photoUrl: undefined }));
+        localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(noPhotos));
+      } catch (finalErr) {
+        console.error('Failed to cache houses to localStorage:', finalErr);
+      }
+    }
+  }
+}
+
 export const INITIAL_SAMPLE_HOUSES: SavedHousePoint[] = [
   {
     id: 'house-branta-1',
@@ -60,7 +86,7 @@ export function getSavedHousePoints(): SavedHousePoint[] {
       if (Array.isArray(parsed)) return parsed;
     }
     // Set initial sample houses jika baru pertama kali
-    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(INITIAL_SAMPLE_HOUSES));
+    saveHousesToLocalStorageSafely(INITIAL_SAMPLE_HOUSES);
     return INITIAL_SAMPLE_HOUSES;
   } catch (err) {
     console.error('Failed to read saved house points:', err);
@@ -88,7 +114,7 @@ export function saveHousePoint(house: SavedHousePoint, sessionId?: string): Save
       updated = [finalHouse, ...current];
     }
 
-    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(updated));
+    saveHousesToLocalStorageSafely(updated);
 
     // Langsung upsert ke Cloud Supabase agar perangkat lain (PC / iPhone) langsung menerima pembaruan
     const activeSession = sessionId || getActiveSessionId();
@@ -235,7 +261,7 @@ export async function fetchHousesFromSupabase(sessionId?: string): Promise<{
       (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
     );
 
-    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(merged));
+    saveHousesToLocalStorageSafely(merged);
     return { success: true, houses: merged };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Gagal memuat dari cloud' };
@@ -249,7 +275,7 @@ export function deleteHousePoint(id: string): SavedHousePoint[] {
   try {
     const current = getSavedHousePoints();
     const updated = current.filter((h) => h.id !== id);
-    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(updated));
+    saveHousesToLocalStorageSafely(updated);
 
     // Hapus juga di cloud Supabase
     Promise.resolve(

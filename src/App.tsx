@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { DeliveryPackage, CourierSettings, PackageStatus, RouteStrategy, DailyHistoryEntry, SavedHousePoint } from './types';
 import { DEFAULT_SETTINGS, INITIAL_SAMPLE_PACKAGES, INITIAL_SAMPLE_HISTORY } from './utils/sampleData';
 import {
@@ -31,6 +31,7 @@ import {
   quickRecordCurrentGpsPoint,
   fetchHousesFromSupabase,
   deliverWithHousePhoto,
+  findMatchingHouse,
 } from './utils/houseManager';
 import {
   getLocalLicense,
@@ -80,21 +81,37 @@ export function App() {
   // Modal Cepat Pengisian Nomor HP Pelanggan (Buka Sensor Sprinter)
   const [phoneEditPkg, setPhoneEditPkg] = useState<DeliveryPackage | null>(null);
   const [isQuickPhoneOpen, setIsQuickPhoneOpen] = useState(false);
+  const hasLoadedInitialCloudSession = useRef(false);
 
   useEffect(() => {
     // Kunci memori penyimpanan HP agar tidak dihapus otomatis oleh sistem Android/iOS
     requestPersistentStorage();
 
+    // Pastikan URL selalu memuat parameter ?session= agar sinkronisasi PC & iPhone selalu terhubung
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.get('session') && !params.get('s')) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('session', sessionId);
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to update URL search param:', e);
+    }
+
     // Sinkronisasi status lisensi dengan database Supabase di background
     syncLicenseWithCloud().then((updated) => {
       if (updated) setLicense(updated);
     });
-  }, []);
+  }, [sessionId]);
 
   // Sinkronisasi Sesi Realtime Supabase (PC & iPhone otomatis tersambung)
   useEffect(() => {
     // 1. Ambil sesi aktif terkini dari Supabase
     fetchSessionFromCloud(sessionId).then((res) => {
+      hasLoadedInitialCloudSession.current = true;
       if (res.success && res.packages && res.packages.length > 0) {
         setPackages(res.packages);
       }
@@ -118,6 +135,33 @@ export function App() {
     fetchHousesFromSupabase(sessionId).then((res) => {
       if (res.success && res.houses && res.houses.length > 0) {
         setSavedHouses(res.houses);
+
+        // Sinkronkan koordinat dan status paket aktif dengan titik rumah yang sudah dikunci kurir di iPhone
+        setPackages((prev) => {
+          let hasChange = false;
+          const updated = prev.map((p) => {
+            const match = findMatchingHouse(res.houses!, p);
+            if (match) {
+              const isDeliveredByHouse =
+                match.notes?.includes(p.trackingNumber) ||
+                (match.notes?.includes('berhasil diantar') && p.status !== 'delivered');
+
+              if (p.lat !== match.lat || p.lng !== match.lng || (isDeliveredByHouse && p.status !== 'delivered')) {
+                hasChange = true;
+                return {
+                  ...p,
+                  lat: match.lat,
+                  lng: match.lng,
+                  areaOrStreet: match.areaOrStreet || p.areaOrStreet,
+                  benchmark: match.benchmark || p.benchmark,
+                  status: isDeliveredByHouse ? ('delivered' as PackageStatus) : p.status,
+                };
+              }
+            }
+            return p;
+          });
+          return hasChange ? updated : prev;
+        });
       }
     });
 
@@ -137,6 +181,26 @@ export function App() {
       fetchHousesFromSupabase(sessionId).then((res) => {
         if (res.success && res.houses) {
           setSavedHouses(res.houses);
+          setPackages((prev) => {
+            let hasChange = false;
+            const updated = prev.map((p) => {
+              const match = findMatchingHouse(res.houses!, p);
+              if (match) {
+                if (p.lat !== match.lat || p.lng !== match.lng) {
+                  hasChange = true;
+                  return {
+                    ...p,
+                    lat: match.lat,
+                    lng: match.lng,
+                    areaOrStreet: match.areaOrStreet || p.areaOrStreet,
+                    benchmark: match.benchmark || p.benchmark,
+                  };
+                }
+              }
+              return p;
+            });
+            return hasChange ? updated : prev;
+          });
         }
       });
     });
@@ -253,6 +317,9 @@ export function App() {
 
   // Otomatis push update sesi ke cloud saat ada perubahan data di PC atau iPhone
   useEffect(() => {
+    // Jangan push ke cloud sebelum data sesi awal dari cloud selesai ditarik (mencegah PC menimpa data iPhone)
+    if (!hasLoadedInitialCloudSession.current) return;
+
     const timer = setTimeout(() => {
       if (packages.length > 0) {
         pushSessionToCloud(sessionId, packages, settings);
@@ -342,6 +409,26 @@ export function App() {
     const res = await fetchHousesFromSupabase(sessionId);
     if (res.success && res.houses) {
       setSavedHouses(res.houses);
+      setPackages((prev) => {
+        let hasChange = false;
+        const updated = prev.map((p) => {
+          const match = findMatchingHouse(res.houses!, p);
+          if (match) {
+            if (p.lat !== match.lat || p.lng !== match.lng) {
+              hasChange = true;
+              return {
+                ...p,
+                lat: match.lat,
+                lng: match.lng,
+                areaOrStreet: match.areaOrStreet || p.areaOrStreet,
+                benchmark: match.benchmark || p.benchmark,
+              };
+            }
+          }
+          return p;
+        });
+        return hasChange ? updated : prev;
+      });
     }
   };
 

@@ -20,7 +20,7 @@ export function getActiveSessionId(): string {
     }
 
     const saved = localStorage.getItem(STORAGE_KEY_SESSION_ID);
-    if (saved && saved.trim().length > 0) {
+    if (saved && saved.trim().length > 0 && !saved.startsWith('session-') && !saved.startsWith('demo-')) {
       return saved.trim();
     }
 
