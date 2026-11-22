@@ -26,6 +26,7 @@ import {
   formatRupiah,
   calculateCodWithCourierFee,
   formatCodWhatsAppInfo,
+  generateJntDeliveryMessage,
 } from '../utils/routeOptimizer';
 import { findMatchingHouse } from '../utils/houseManager';
 
@@ -109,14 +110,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
       }
     }
 
-    const codInfo = formatCodWhatsAppInfo(pkg.isCod, pkg.codAmount);
-
-    let text = whatsAppTemplate
-      .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
-      .replace(/ No\.?\s*Resi\s*{RESI}/gi, '')
-      .replace(/{RESI}/g, '')
-      .replace(/{INFO_COD}/g, codInfo)
-      .replace(/{ALAMAT}/g, pkg.fullAddress);
+    const text = generateJntDeliveryMessage(pkg, whatsAppTemplate);
 
     let phone = pkg.recipientPhone.replace(/\D/g, '');
     if (phone.startsWith('08')) {
@@ -125,6 +119,23 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
+  };
+
+  const handleOpenSms = (pkg: DeliveryPackage) => {
+    if (pkg.recipientPhone?.includes('*') || (pkg.recipientPhone?.length || 0) < 10) {
+      if (onQuickEditPhone) {
+        onQuickEditPhone(pkg);
+        return;
+      }
+    }
+
+    const text = generateJntDeliveryMessage(pkg, whatsAppTemplate);
+    let phone = pkg.recipientPhone.replace(/\D/g, '');
+    if (phone.startsWith('08')) {
+      phone = '0' + phone.slice(2);
+    }
+
+    window.open(`sms:${phone}?body=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handleTelp = (pkg: DeliveryPackage) => {
@@ -281,12 +292,12 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
           )}
 
           {/* Row 1 Actions: Maps, Chat WA, Telp */}
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="grid grid-cols-4 gap-1.5 pt-1">
             <a
               href={getSingleNavigationUrl(pkg.lat, pkg.lng, pkg.fullAddress)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-1.5 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-2 px-3 rounded-full transition text-center"
+              className="flex items-center justify-center gap-1 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-2 px-2 rounded-full transition text-center"
             >
               <Navigation className="w-3.5 h-3.5" />
               <span>Maps</span>
@@ -294,16 +305,26 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
             <button
               onClick={() => handleOpenWhatsApp(pkg)}
-              className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2 px-3 rounded-full transition cursor-pointer border border-[#e4e4e7]"
+              className="flex items-center justify-center gap-1 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2 px-2 rounded-full transition cursor-pointer border border-[#e4e4e7]"
             >
-              <MessageCircle className="w-3.5 h-3.5 text-[#222222]" />
-              <span>Chat WA</span>
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+              <span>WA</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenSms(pkg)}
+              className="flex items-center justify-center gap-1 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2 px-2 rounded-full transition text-center border border-[#e4e4e7] cursor-pointer"
+              title="Kirim SMS jika tidak terdaftar di WhatsApp"
+            >
+              <Phone className="w-3.5 h-3.5 text-blue-600" />
+              <span>SMS</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleTelp(pkg)}
-              className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2 px-3 rounded-full transition text-center border border-[#e4e4e7] cursor-pointer"
+              className="flex items-center justify-center gap-1 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2 px-2 rounded-full transition text-center border border-[#e4e4e7] cursor-pointer"
             >
               <Phone className="w-3.5 h-3.5 text-[#222222]" />
               <span>Telp</span>

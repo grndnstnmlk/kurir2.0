@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import type { DeliveryPackage, CourierSettings, PackageStatus, RouteStrategy, DailyHistoryEntry, SavedHousePoint } from './types';
 import { DEFAULT_SETTINGS, INITIAL_SAMPLE_PACKAGES, INITIAL_SAMPLE_HISTORY } from './utils/sampleData';
-import { optimizeDeliveryRoute, getMultiStopNavigationUrl, formatRupiah, formatCodWhatsAppInfo } from './utils/routeOptimizer';
+import {
+  optimizeDeliveryRoute,
+  getMultiStopNavigationUrl,
+  formatRupiah,
+  formatCodWhatsAppInfo,
+  generateJntDeliveryMessage,
+} from './utils/routeOptimizer';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { IPhoneCardDeckView } from './components/IPhoneCardDeckView';
@@ -155,11 +161,8 @@ export function App() {
           if (!parsed.adminWhatsAppNumber || parsed.adminWhatsAppNumber.includes('1234567890')) {
             parsed.adminWhatsAppNumber = '6281295713923';
           }
-          if (parsed.customWhatsAppTemplate && parsed.customWhatsAppTemplate.includes('{RESI}')) {
-            parsed.customWhatsAppTemplate = parsed.customWhatsAppTemplate
-              .replace(/ No\.?\s*Resi\s*{RESI}/gi, '')
-              .replace(/{RESI}/g, '')
-              .trim();
+          if (!parsed.customWhatsAppTemplate || parsed.customWhatsAppTemplate.includes('mau mengantar paket')) {
+            parsed.customWhatsAppTemplate = DEFAULT_SETTINGS.customWhatsAppTemplate;
           }
           return parsed;
         }
@@ -522,7 +525,11 @@ export function App() {
     setIsQuickPhoneOpen(true);
   };
 
-  const handleSaveQuickPhone = (pkgId: string, newPhone: string, autoOpenWhatsApp: boolean = false) => {
+  const handleSaveQuickPhone = (
+    pkgId: string,
+    newPhone: string,
+    action: 'whatsapp' | 'sms' | 'none' = 'none'
+  ) => {
     let targetPkg: DeliveryPackage | null = null;
     setPackages((prev) => {
       const updated = prev.map((p) => {
@@ -536,22 +543,22 @@ export function App() {
       return updated;
     });
 
-    if (autoOpenWhatsApp && targetPkg) {
+    if (targetPkg && (action === 'whatsapp' || action === 'sms')) {
       const pkg = targetPkg as DeliveryPackage;
-      const codInfo = formatCodWhatsAppInfo(pkg.isCod, pkg.codAmount);
-
-      let text = settings.customWhatsAppTemplate
-        .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
-        .replace(/ No\.?\s*Resi\s*{RESI}/gi, '')
-        .replace(/{RESI}/g, '')
-        .replace(/{INFO_COD}/g, codInfo)
-        .replace(/{ALAMAT}/g, pkg.fullAddress);
-
+      const text = generateJntDeliveryMessage(pkg, settings.customWhatsAppTemplate);
       let phone = newPhone.replace(/\D/g, '');
-      if (phone.startsWith('08')) {
-        phone = '628' + phone.slice(2);
+
+      if (action === 'whatsapp') {
+        if (phone.startsWith('08')) {
+          phone = '628' + phone.slice(2);
+        }
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+      } else if (action === 'sms') {
+        if (phone.startsWith('08')) {
+          phone = '0' + phone.slice(2);
+        }
+        window.open(`sms:${phone}?body=${encodeURIComponent(text)}`, '_blank');
       }
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
     }
   };
 

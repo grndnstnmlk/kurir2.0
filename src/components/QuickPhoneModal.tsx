@@ -7,7 +7,7 @@ interface QuickPhoneModalProps {
   isOpen: boolean;
   pkg: DeliveryPackage | null;
   onClose: () => void;
-  onSavePhone: (pkgId: string, newPhone: string, autoOpenWhatsApp?: boolean) => void;
+  onSavePhone: (pkgId: string, newPhone: string, action?: 'whatsapp' | 'sms' | 'none') => void;
   whatsAppTemplate?: string;
 }
 
@@ -43,7 +43,7 @@ export const QuickPhoneModal: React.FC<QuickPhoneModalProps> = ({
     return val.replace(/[^\d+]/g, '');
   };
 
-  const handleSave = (openWA: boolean = false) => {
+  const handleSave = (action: 'whatsapp' | 'sms' | 'none' = 'none') => {
     const clean = cleanPhoneInput(phoneNumber);
     if (!clean || clean.length < 9) {
       setErrorMsg('Nomor telepon minimal 10 digit (contoh: 081234567890)');
@@ -54,7 +54,7 @@ export const QuickPhoneModal: React.FC<QuickPhoneModalProps> = ({
       return;
     }
 
-    onSavePhone(pkg.id, clean, openWA);
+    onSavePhone(pkg.id, clean, action);
     onClose();
   };
 
@@ -133,7 +133,7 @@ export const QuickPhoneModal: React.FC<QuickPhoneModalProps> = ({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  handleSave(false);
+                  handleSave('none');
                 }
               }}
               placeholder="081234567890"
@@ -166,16 +166,25 @@ export const QuickPhoneModal: React.FC<QuickPhoneModalProps> = ({
         <div className="mt-6 flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => handleSave(true)}
+            onClick={() => handleSave('whatsapp')}
             className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs rounded-full transition shadow-sm cursor-pointer flex items-center justify-center gap-2"
           >
             <MessageCircle className="w-4 h-4" />
-            <span>Simpan & Buka Chat WhatsApp Langsung</span>
+            <span>Simpan & Buka Chat WhatsApp</span>
           </button>
 
           <button
             type="button"
-            onClick={() => handleSave(false)}
+            onClick={() => handleSave('sms')}
+            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs rounded-full transition shadow-sm cursor-pointer flex items-center justify-center gap-2"
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>Simpan & Buka SMS (Jika Tidak Ada WA)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSave('none')}
             className="w-full py-2.5 px-4 bg-[#292929] hover:bg-[#080808] active:scale-98 text-white font-medium text-xs rounded-full transition cursor-pointer flex items-center justify-center gap-2"
           >
             <Check className="w-4 h-4" />

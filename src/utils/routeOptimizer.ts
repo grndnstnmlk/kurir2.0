@@ -86,6 +86,52 @@ export function formatCodWhatsAppInfo(
 }
 
 /**
+ * Format Pesan Notifikasi Delivery Resmi J&T Express (Sesuai Standar Chat Sprinter):
+ * 
+ * Contoh COD:
+ * "Halo Hana, kami dari J&T Express akan melakukan proses delivery paket COD dengan nomor waybill JY2332337682 ke alamat anda di Terrak konter jaya cell TLANAKAN PAMEKASAN JAWA TIMUR , mohon kesediaannya untuk memastikan apakah anda benar memesan barang COD senilai Rp 50.000?
+ * Terima kasih"
+ *
+ * Contoh Non-COD:
+ * "Halo Hana, kami dari J&T Express akan melakukan proses delivery paket dengan nomor waybill JY2332337682 ke alamat anda di Terrak konter jaya cell TLANAKAN PAMEKASAN JAWA TIMUR , mohon kesediaannya untuk memastikan apakah anda berada di tempat?
+ * Terima kasih"
+ */
+export function generateJntDeliveryMessage(
+  pkg: DeliveryPackage,
+  customTemplate?: string
+): string {
+  const recipient = pkg.recipientName ? pkg.recipientName.trim() : 'Kak';
+  const calc = calculateCodWithCourierFee(pkg.codAmount || 0);
+  const codPrice = calc.formattedTotal || formatRupiah(pkg.codAmount || 0);
+
+  // Jika customTemplate belum disetel atau menggunakan template lama 'mau mengantar paket',
+  // gunakan format resmi J&T Express persis seperti tangkapan layar lapangan
+  if (!customTemplate || customTemplate.includes('mau mengantar paket')) {
+    if (pkg.isCod && pkg.codAmount > 0) {
+      return `Halo ${recipient}, kami dari J&T Express akan melakukan proses delivery paket COD dengan nomor waybill ${pkg.trackingNumber} ke alamat anda di ${pkg.fullAddress} , mohon kesediaannya untuk memastikan apakah anda benar memesan barang COD senilai ${codPrice}?\nTerima kasih`;
+    } else {
+      return `Halo ${recipient}, kami dari J&T Express akan melakukan proses delivery paket dengan nomor waybill ${pkg.trackingNumber} ke alamat anda di ${pkg.fullAddress} , mohon kesediaannya untuk memastikan apakah anda berada di tempat?\nTerima kasih`;
+    }
+  }
+
+  // Jika menggunakan customTemplate dari SettingsModal
+  const codType = pkg.isCod ? 'COD ' : '';
+  const codConfirm = pkg.isCod
+    ? `mohon kesediaannya untuk memastikan apakah anda benar memesan barang COD senilai ${codPrice}?`
+    : 'mohon kesediaannya untuk memastikan apakah anda berada di tempat?';
+
+  return customTemplate
+    .replace(/{NAMA}/g, recipient)
+    .replace(/{RESI}/g, pkg.trackingNumber)
+    .replace(/{WAYBILL}/g, pkg.trackingNumber)
+    .replace(/{ALAMAT}/g, pkg.fullAddress)
+    .replace(/{TIPE_PAKET}/g, codType)
+    .replace(/{KONFIRMASI_COD}/g, codConfirm)
+    .replace(/{TOTAL_COD}/g, codPrice)
+    .replace(/{INFO_COD}/g, pkg.isCod ? `senilai ${codPrice}` : 'Non-COD');
+}
+
+/**
  * Menghitung jarak lurus antara dua koordinat bumi menggunakan rumus Haversine (dalam km)
  */
 export function calculateDistanceKm(

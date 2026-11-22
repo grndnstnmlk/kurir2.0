@@ -32,6 +32,7 @@ import {
   calculateCodWithCourierFee,
   formatCodWhatsAppInfo,
   formatRupiah,
+  generateJntDeliveryMessage,
 } from '../utils/routeOptimizer';
 import { findMatchingHouse } from '../utils/houseManager';
 
@@ -193,14 +194,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
       }
     }
 
-    const codInfo = formatCodWhatsAppInfo(pkg.isCod, pkg.codAmount);
-
-    let text = whatsAppTemplate
-      .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
-      .replace(/ No\.?\s*Resi\s*{RESI}/gi, '')
-      .replace(/{RESI}/g, '')
-      .replace(/{INFO_COD}/g, codInfo)
-      .replace(/{ALAMAT}/g, pkg.fullAddress);
+    const text = generateJntDeliveryMessage(pkg, whatsAppTemplate);
 
     let phone = pkg.recipientPhone.replace(/\D/g, '');
     if (phone.startsWith('08')) {
@@ -208,6 +202,23 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     }
 
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleOpenSms = (pkg: DeliveryPackage) => {
+    if (pkg.recipientPhone?.includes('*') || (pkg.recipientPhone?.length || 0) < 10) {
+      if (onQuickEditPhone) {
+        onQuickEditPhone(pkg);
+        return;
+      }
+    }
+
+    const text = generateJntDeliveryMessage(pkg, whatsAppTemplate);
+    let phone = pkg.recipientPhone.replace(/\D/g, '');
+    if (phone.startsWith('08')) {
+      phone = '0' + phone.slice(2);
+    }
+
+    window.open(`sms:${phone}?body=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -534,24 +545,33 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           </p>
         </div>
 
-        {/* 6. Dual Action Buttons: Side-by-side White Rounded Rectangles ("Share" & "Get $15 Off") */}
-        <div className="grid grid-cols-2 gap-3 pt-3 z-10">
+        {/* 6. Action Buttons: Chat WA, SMS, dan Buka Maps */}
+        <div className="grid grid-cols-12 gap-2 pt-3 z-10">
           <button
             onClick={() => handleOpenWhatsApp(currentPkg)}
-            className="w-full bg-white hover:bg-neutral-100 active:scale-95 text-black font-bold text-sm py-4 px-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2 cursor-pointer border border-neutral-200/20"
+            className="col-span-5 bg-white hover:bg-neutral-100 active:scale-95 text-black font-bold text-xs sm:text-sm py-3.5 px-3 rounded-2xl transition shadow-xl flex items-center justify-center gap-1.5 cursor-pointer border border-neutral-200/20"
           >
             <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600/20 stroke-[2.2]" />
             <span>Chat WA</span>
+          </button>
+
+          <button
+            onClick={() => handleOpenSms(currentPkg)}
+            title="Kirim SMS jika nomor tidak terdaftar di WhatsApp"
+            className="col-span-3 bg-white hover:bg-neutral-100 active:scale-95 text-black font-bold text-xs sm:text-sm py-3.5 px-2 rounded-2xl transition shadow-xl flex items-center justify-center gap-1 cursor-pointer border border-neutral-200/20"
+          >
+            <Phone className="w-3.5 h-3.5 text-blue-600" />
+            <span>SMS</span>
           </button>
 
           <a
             href={getSingleNavigationUrl(currentPkg.lat, currentPkg.lng, currentPkg.fullAddress)}
             target="_blank"
             rel="noreferrer"
-            className="w-full bg-white hover:bg-neutral-100 active:scale-95 text-black font-bold text-sm py-4 px-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2 cursor-pointer text-center border border-neutral-200/20"
+            className="col-span-4 bg-white hover:bg-neutral-100 active:scale-95 text-black font-bold text-xs sm:text-sm py-3.5 px-2 rounded-2xl transition shadow-xl flex items-center justify-center gap-1.5 cursor-pointer text-center border border-neutral-200/20"
           >
             <Navigation className="w-4 h-4 text-blue-600 fill-blue-600/20 stroke-[2.2]" />
-            <span>Buka Maps</span>
+            <span>Maps</span>
           </a>
         </div>
 
