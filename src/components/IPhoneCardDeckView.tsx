@@ -24,6 +24,7 @@ import {
   Layers,
   CheckCheck,
   X,
+  Search,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import {
@@ -75,7 +76,19 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [pinToast, setPinToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isBatchAreaOpen, setIsBatchAreaOpen] = useState(false);
   const [filterPendingOnly, setFilterPendingOnly] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState<'all' | 'pending' | 'cod' | 'delivered' | 'returned'>('all');
+  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isSearchOpen]);
 
   const handleTriggerCamera = () => {
     if (cameraInputRef.current) {
@@ -136,18 +149,25 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     }
   };
 
-  // Keyboard navigation for desktop testing (Left/Right arrows)
+  // Keyboard navigation & search shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' && currentIndex < packages.length - 1) {
+      // Shortcut Ctrl+K atau slash '/' untuk membuka pencarian cepat
+      if ((e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key === 'k')) && !isSearchOpen) {
+        e.preventDefault();
+        setIsSearchOpen(true);
+        setSearchQuery('');
+      } else if (e.key === 'Escape' && isSearchOpen) {
+        setIsSearchOpen(false);
+      } else if (!isSearchOpen && e.key === 'ArrowRight' && currentIndex < packages.length - 1) {
         setCurrentIndex((prev) => prev + 1);
-      } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+      } else if (!isSearchOpen && e.key === 'ArrowLeft' && currentIndex > 0) {
         setCurrentIndex((prev) => prev - 1);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, packages.length]);
+  }, [currentIndex, packages.length, isSearchOpen]);
 
   if (packages.length === 0) {
     return (
@@ -319,6 +339,57 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     setTouchStartX(null);
   };
 
+  const handleSelectPackageFromSearch = (pkg: DeliveryPackage) => {
+    // Jika paket sudah terkirim/diretur dan mode Fokus Sisa aktif, matikan Fokus Sisa agar kartu bisa ditampilkan
+    if ((pkg.status === 'delivered' || pkg.status === 'returned') && filterPendingOnly) {
+      setFilterPendingOnly(false);
+    }
+
+    const targetIdx = packages.findIndex((p) => p.id === pkg.id);
+    if (targetIdx !== -1) {
+      setCurrentIndex(targetIdx);
+      setPinToast({
+        type: 'success',
+        text: `🎯 Menampilkan Stop #${pkg.orderIndex} (${pkg.recipientName})`,
+      });
+      setTimeout(() => setPinToast(null), 3000);
+    }
+
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const filteredSearchResults = packages.filter((pkg) => {
+    if (searchFilter === 'pending' && pkg.status !== 'pending' && pkg.status !== 'rescheduled') {
+      return false;
+    }
+    if (searchFilter === 'cod' && !pkg.isCod) {
+      return false;
+    }
+    if (searchFilter === 'delivered' && pkg.status !== 'delivered') {
+      return false;
+    }
+    if (searchFilter === 'returned' && pkg.status !== 'returned') {
+      return false;
+    }
+
+    if (!searchQuery.trim()) return true;
+
+    const q = searchQuery.toLowerCase().trim();
+    const matchName = pkg.recipientName.toLowerCase().includes(q);
+    const matchResi = pkg.trackingNumber.toLowerCase().includes(q);
+    const matchPhone = pkg.recipientPhone ? pkg.recipientPhone.includes(q) : false;
+    const matchArea = pkg.areaOrStreet.toLowerCase().includes(q);
+    const matchAddress = pkg.fullAddress.toLowerCase().includes(q);
+    const matchBenchmark = pkg.benchmark ? pkg.benchmark.toLowerCase().includes(q) : false;
+    const matchIndex =
+      `stop ${pkg.orderIndex}`.includes(q) ||
+      `#${pkg.orderIndex}`.includes(q) ||
+      String(pkg.orderIndex) === q;
+
+    return matchName || matchResi || matchPhone || matchArea || matchAddress || matchBenchmark || matchIndex;
+  });
+
   const isDelivered = currentPkg?.status === 'delivered';
   const isReturned = currentPkg?.status === 'returned';
   const isProblem = currentPkg?.status === 'rescheduled' || currentPkg?.status === 'failed';
@@ -358,21 +429,40 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
         )}
 
         {/* Refero Navigation Bar: "Paket Antaran" & "Done" (Selesai) */}
-        <div className="flex items-center justify-between py-2 z-10">
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            title="Ganti Mode Tampilan (Dark AMOLED / Light Paper)"
-            className={`p-2 rounded-full transition cursor-pointer text-xs flex items-center gap-1.5 ${
-              isDarkMode
-                ? 'text-neutral-400 hover:text-white bg-neutral-900/60'
-                : 'text-neutral-600 hover:text-black bg-neutral-200/60'
-            }`}
-          >
-            {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-            <span className="text-[11px] font-medium hidden sm:inline">
-              {isDarkMode ? 'Terang' : 'Gelap'}
-            </span>
-          </button>
+        <div className="flex items-center justify-between py-2 z-10 gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              title="Ganti Mode Tampilan (Dark AMOLED / Light Paper)"
+              className={`p-2 rounded-full transition cursor-pointer text-xs flex items-center gap-1.5 ${
+                isDarkMode
+                  ? 'text-neutral-400 hover:text-white bg-neutral-900/60'
+                  : 'text-neutral-600 hover:text-black bg-neutral-200/60'
+              }`}
+            >
+              {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              <span className="text-[11px] font-medium hidden sm:inline">
+                {isDarkMode ? 'Terang' : 'Gelap'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSearchOpen(true);
+                setSearchQuery('');
+              }}
+              title="Pencarian Cepat Paket (Ketik Nama / Resi / No. HP / Dusun) [Shortcut: /]"
+              className={`py-1.5 px-3 rounded-full transition cursor-pointer text-xs flex items-center gap-1.5 font-bold shadow-2xs active:scale-95 border ${
+                isDarkMode
+                  ? 'text-neutral-200 hover:text-white bg-neutral-900/90 border-neutral-700 hover:border-neutral-500'
+                  : 'text-neutral-800 hover:text-black bg-white border-neutral-300 hover:bg-neutral-50'
+              }`}
+            >
+              <Search className="w-3.5 h-3.5 text-amber-500" />
+              <span>Cari</span>
+            </button>
+          </div>
 
           <div className="text-center">
             <h2 className={`text-base font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-neutral-900'}`}>
@@ -1063,6 +1153,270 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
               >
                 Tutup
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. Modal Pencarian Cepat (Quick Search Resi / Nama / HP / Dusun) */}
+      {isSearchOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setIsSearchOpen(false)}
+        >
+          <div
+            className={`w-full max-w-lg rounded-t-[32px] sm:rounded-[32px] border p-4 sm:p-6 shadow-2xl max-h-[88vh] flex flex-col font-aspekta animate-in slide-in-from-bottom duration-300 ${
+              isDarkMode
+                ? 'bg-neutral-950 text-white border-neutral-800'
+                : 'bg-white text-neutral-900 border-[#e4e4e7]'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Search Input Bar */}
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-neutral-200 dark:border-neutral-800">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-amber-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Ketik nama, no. resi, HP, dusun..."
+                  className={`w-full rounded-2xl pl-10 pr-9 py-2.5 text-xs sm:text-sm font-medium border focus:outline-none transition ${
+                    isDarkMode
+                      ? 'bg-neutral-900 border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400'
+                      : 'bg-[#f4f4f5] border-[#e4e4e7] text-black placeholder-neutral-400 focus:border-black'
+                  }`}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(false)}
+                className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition cursor-pointer border ${
+                  isDarkMode
+                    ? 'bg-neutral-900 text-neutral-300 hover:text-white border-neutral-800'
+                    : 'bg-[#f4f4f5] text-neutral-700 hover:text-black border-[#e4e4e7]'
+                }`}
+              >
+                Tutup
+              </button>
+            </div>
+
+            {/* Quick Filter Category Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-2.5 scrollbar-none border-b border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setSearchFilter('all')}
+                className={`px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
+                  searchFilter === 'all'
+                    ? 'bg-amber-500 text-neutral-950 font-bold shadow-xs'
+                    : isDarkMode
+                    ? 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
+                    : 'bg-[#f4f4f5] text-neutral-600 hover:bg-[#e4e4e7]'
+                }`}
+              >
+                Semua ({packages.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSearchFilter('pending')}
+                className={`px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
+                  searchFilter === 'pending'
+                    ? 'bg-amber-500 text-neutral-950 font-bold shadow-xs'
+                    : isDarkMode
+                    ? 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
+                    : 'bg-[#f4f4f5] text-neutral-600 hover:bg-[#e4e4e7]'
+                }`}
+              >
+                Belum Diantar ({packages.filter((p) => p.status === 'pending' || p.status === 'rescheduled').length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSearchFilter('cod')}
+                className={`px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
+                  searchFilter === 'cod'
+                    ? 'bg-amber-500 text-neutral-950 font-bold shadow-xs'
+                    : isDarkMode
+                    ? 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
+                    : 'bg-[#f4f4f5] text-neutral-600 hover:bg-[#e4e4e7]'
+                }`}
+              >
+                💰 COD ({packages.filter((p) => p.isCod).length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSearchFilter('delivered')}
+                className={`px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
+                  searchFilter === 'delivered'
+                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                    : isDarkMode
+                    ? 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
+                    : 'bg-[#f4f4f5] text-neutral-600 hover:bg-[#e4e4e7]'
+                }`}
+              >
+                ✓ Terkirim ({packages.filter((p) => p.status === 'delivered').length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSearchFilter('returned')}
+                className={`px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
+                  searchFilter === 'returned'
+                    ? 'bg-red-600 text-white font-bold shadow-xs'
+                    : isDarkMode
+                    ? 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
+                    : 'bg-[#f4f4f5] text-neutral-600 hover:bg-[#e4e4e7]'
+                }`}
+              >
+                ↩ Retur ({packages.filter((p) => p.status === 'returned').length})
+              </button>
+            </div>
+
+            {/* Results Counter / Info */}
+            <div className="flex items-center justify-between py-2 text-[11px] text-neutral-400 font-medium">
+              <span>
+                {searchQuery.trim()
+                  ? `Hasil pencarian: ${filteredSearchResults.length} paket`
+                  : `Menampilkan ${filteredSearchResults.length} paket (Urutan Stop 1..${packages.length})`}
+              </span>
+              <span className="text-[10px] text-neutral-500">
+                Ketuk paket untuk melompat
+              </span>
+            </div>
+
+            {/* Scrollable Results List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[55vh]">
+              {filteredSearchResults.length === 0 ? (
+                <div className="py-10 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center mx-auto text-neutral-400">
+                    <Search className="w-6 h-6 stroke-[1.5]" />
+                  </div>
+                  <h4 className="text-sm font-bold">Tidak ada paket yang cocok</h4>
+                  <p className="text-xs text-neutral-400 max-w-xs mx-auto">
+                    Periksa kembali ejaan nama, nomor resi (JP/JX/4 angka), atau nama dusun yang dicari.
+                  </p>
+                </div>
+              ) : (
+                filteredSearchResults.map((pkg) => {
+                  const isPkgDelivered = pkg.status === 'delivered';
+                  const isPkgReturned = pkg.status === 'returned';
+
+                  return (
+                    <div
+                      key={pkg.id}
+                      onClick={() => handleSelectPackageFromSearch(pkg)}
+                      className={`p-3 sm:p-3.5 rounded-2xl border transition-all cursor-pointer group active:scale-98 ${
+                        isDarkMode
+                          ? isPkgDelivered
+                            ? 'bg-neutral-900/50 border-neutral-800 opacity-70 hover:opacity-100 hover:border-neutral-700'
+                            : isPkgReturned
+                            ? 'bg-red-950/20 border-red-900/40 hover:border-red-800'
+                            : 'bg-neutral-900/90 border-neutral-800 hover:border-amber-500/60 shadow-xs'
+                          : isPkgDelivered
+                          ? 'bg-[#f4f4f5] border-[#e4e4e7] opacity-75 hover:opacity-100'
+                          : isPkgReturned
+                          ? 'bg-red-50/50 border-red-200'
+                          : 'bg-white border-[#e4e4e7] hover:border-neutral-400 shadow-2xs'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="space-y-1 flex-1">
+                          {/* Row 1: Stop #, Name, Resi */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-[10px] font-bold flex items-center justify-center shrink-0 border border-neutral-300 dark:border-neutral-700">
+                              #{pkg.orderIndex}
+                            </span>
+                            <span className="font-bold text-sm text-neutral-950 dark:text-white group-hover:text-amber-500 transition">
+                              {pkg.recipientName}
+                            </span>
+                            <span className="font-mono text-[11px] text-neutral-500">
+                              {pkg.trackingNumber}
+                            </span>
+                          </div>
+
+                          {/* Row 2: Area & Address */}
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">
+                            📍 <strong>{pkg.areaOrStreet}</strong> • {pkg.fullAddress}
+                          </p>
+
+                          {/* Row 3: Badges */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {pkg.isCod ? (
+                              <span className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                Tagih {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
+                              </span>
+                            ) : (
+                              <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-300/40">
+                                Lunas
+                              </span>
+                            )}
+
+                            {isPkgDelivered ? (
+                              <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
+                                ✓ Terkirim
+                              </span>
+                            ) : isPkgReturned ? (
+                              <span className="bg-red-500/20 text-red-600 dark:text-red-300 text-[10px] px-2 py-0.5 rounded-full font-bold border border-red-500/30">
+                                ↩ Diretur
+                              </span>
+                            ) : (
+                              <span className="bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                                Belum Diantar
+                              </span>
+                            )}
+
+                            {(pkg.deliveryAttempts || 1) > 1 && (
+                              <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                Percobaan {pkg.deliveryAttempts}/3
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action buttons on card */}
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 shrink-0 self-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectPackageFromSearch(pkg);
+                            }}
+                            className="py-1.5 px-3 rounded-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-neutral-950 font-bold text-xs transition cursor-pointer shadow-xs flex items-center gap-1"
+                          >
+                            <span>Buka</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenWhatsApp(pkg);
+                            }}
+                            className="p-1.5 rounded-full bg-[#f4f4f5] dark:bg-neutral-800 hover:bg-emerald-100 dark:hover:bg-emerald-950 text-emerald-600 dark:text-emerald-400 transition cursor-pointer border border-neutral-300 dark:border-neutral-700"
+                            title="Chat WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
