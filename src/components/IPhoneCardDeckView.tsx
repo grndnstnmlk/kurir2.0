@@ -410,6 +410,19 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
               {/* Actions & Parcel Badge (Top-Right) */}
               <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handlePromptReturn(currentPkg)}
+                  title="Penerima minta paket diretur ke gudang"
+                  className={`p-2.5 rounded-2xl flex items-center justify-center transition cursor-pointer border active:scale-95 ${
+                    isReturned
+                      ? 'bg-red-600 text-white border-red-700 shadow-sm'
+                      : 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200'
+                  }`}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+
                 {onEditPackage && (
                   <button
                     onClick={() => onEditPackage(currentPkg)}
@@ -420,8 +433,12 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                   </button>
                 )}
                 <div
-                  className="w-11 h-11 rounded-2xl bg-[#f59e0b] text-neutral-950 flex items-center justify-center shadow-md shadow-amber-500/20 active:scale-95 transition cursor-pointer"
-                  title="Paket Siap Kirim"
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md active:scale-95 transition cursor-pointer ${
+                    isReturned
+                      ? 'bg-red-600 text-white shadow-red-500/30'
+                      : 'bg-[#f59e0b] text-neutral-950 shadow-amber-500/20'
+                  }`}
+                  title={isReturned ? 'Paket Diretur ke Drop Point' : 'Paket Siap Kirim'}
                 >
                   <PackageIcon className="w-6 h-6 stroke-[2.2]" />
                 </div>
@@ -699,6 +716,27 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             )}
           </button>
 
+          {/* Tombol Retur Paket (Penerima Minta Dikembalikan / RTS) */}
+          <button
+            type="button"
+            onClick={() => handlePromptReturn(currentPkg)}
+            className={`w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 border shadow-sm ${
+              isReturned
+                ? 'bg-red-600 text-white border-red-700 shadow-red-950/40'
+                : isDarkMode
+                ? 'bg-red-950/40 hover:bg-red-900/60 text-red-300 border-red-500/40'
+                : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
+            }`}
+            title="Klik jika penerima meminta paket diretur ke gudang"
+          >
+            <RotateCcw className={`w-4 h-4 ${isReturned ? 'text-white' : 'text-red-500'}`} />
+            <span>
+              {isReturned
+                ? `↩ Paket Berstatus Retur: "${currentPkg.returnReason || 'Permintaan Penerima'}" (Batal Retur)`
+                : '↩ Retur Paket (Penerima Minta Dikembalikan)'}
+            </span>
+          </button>
+
           {/* Opsi Pendukung Cepat (Kunci GPS Saja / Lihat Foto Tersimpan) */}
           <div className="flex items-center justify-between px-2 text-[11px] text-neutral-400 pt-0.5">
             {onQuickPinGps && (
@@ -734,8 +772,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           </div>
         </div>
 
-        {/* 7. Bottom Action Link: "View in AR" Position -> "Tandai Paket Terkirim" */}
-        <div className="flex flex-col items-center justify-center pt-3 pb-2 z-10 gap-2">
+        {/* 7. Bottom Action Link: "View in AR" Position -> "Tandai Paket Terkirim" & "Retur" */}
+        <div className="flex flex-wrap items-center justify-center pt-3 pb-2 z-10 gap-3">
           <button
             onClick={() =>
               onUpdateStatus(
@@ -743,7 +781,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 currentPkg.status === 'delivered' ? 'pending' : 'delivered'
               )
             }
-            className={`flex items-center gap-2 text-xs sm:text-sm font-semibold py-1.5 px-3 rounded-full transition cursor-pointer active:scale-95 ${
+            className={`flex items-center gap-1.5 text-xs sm:text-sm font-semibold py-1.5 px-3 rounded-full transition cursor-pointer active:scale-95 ${
               isDelivered
                 ? 'text-emerald-400 hover:text-emerald-300'
                 : isDarkMode
@@ -754,15 +792,31 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             {isDelivered ? (
               <>
                 <RotateCcw className="w-4 h-4" />
-                <span>Batal Terkirim (Ubah ke Pending)</span>
+                <span>Batal Terkirim</span>
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Tandai Paket Terkirim</span>
+                <span>Tandai Terkirim</span>
               </>
             )}
           </button>
+
+          <span className="text-neutral-500 text-xs">•</span>
+
+          <button
+            onClick={() => handlePromptReturn(currentPkg)}
+            className={`flex items-center gap-1.5 text-xs sm:text-sm font-semibold py-1.5 px-3 rounded-full transition cursor-pointer active:scale-95 ${
+              isReturned
+                ? 'text-red-400 hover:text-red-300 font-bold'
+                : 'text-red-500 hover:text-red-400'
+            }`}
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-red-500" />
+            <span>{isReturned ? 'Batal Retur' : 'Retur Paket'}</span>
+          </button>
+
+          <span className="text-neutral-500 text-xs">•</span>
 
           <button
             onClick={onOpenMapTab}
@@ -770,7 +824,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
               isDarkMode ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
-            <span>Buka Peta Keseluruhan Rute Branta</span>
+            <span>Peta Rute</span>
             <ArrowRight className="w-3 h-3" />
           </button>
         </div>
@@ -874,32 +928,48 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
                       {/* Status Toggle & WhatsApp */}
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onUpdateStatus(
-                              pkg.id,
-                              pkg.status === 'delivered' ? 'pending' : 'delivered'
-                            )
-                          }
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 ${
-                            isPkgDelivered
-                              ? 'bg-neutral-800 text-white'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                          }`}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>{isPkgDelivered ? 'Terkirim' : 'Kirim'}</span>
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onUpdateStatus(
+                                pkg.id,
+                                pkg.status === 'delivered' ? 'pending' : 'delivered'
+                              )
+                            }
+                            className={`px-2.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 ${
+                              isPkgDelivered
+                                ? 'bg-neutral-800 text-white'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>{isPkgDelivered ? 'Terkirim' : 'Kirim'}</span>
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenWhatsApp(pkg)}
-                          className="p-1.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-emerald-700 transition cursor-pointer border border-[#e4e4e7]"
-                          title="Chat WhatsApp"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePromptReturn(pkg)}
+                            className={`px-2 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 border ${
+                              pkg.status === 'returned'
+                                ? 'bg-red-600 text-white border-red-700'
+                                : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200'
+                            }`}
+                            title="Retur paket ini"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Retur</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenWhatsApp(pkg)}
+                            className="p-1.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-emerald-700 transition cursor-pointer border border-[#e4e4e7]"
+                            title="Chat WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
