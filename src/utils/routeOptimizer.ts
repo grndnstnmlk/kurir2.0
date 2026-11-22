@@ -241,6 +241,46 @@ function optimizeTspNoBacktrack(
   return solveOpenTour2Opt(dropPointLat, dropPointLng, tour);
 }
 
+export interface AreaClusterGroup {
+  areaName: string;
+  packages: DeliveryPackage[];
+  totalPackages: number;
+  deliveredCount: number;
+  pendingCount: number;
+  totalCodAmount: number;
+}
+
+/**
+ * Mengelompokkan paket berdasarkan Area / Dusun / Gang untuk pengambilan paket sekaligus dari motor (Batch Pickup).
+ */
+export function groupPackagesByArea(packages: DeliveryPackage[]): AreaClusterGroup[] {
+  const map = new Map<string, DeliveryPackage[]>();
+  packages.forEach((pkg) => {
+    const area = pkg.areaOrStreet?.trim() || 'Lainnya';
+    if (!map.has(area)) {
+      map.set(area, []);
+    }
+    map.get(area)!.push(pkg);
+  });
+
+  return Array.from(map.entries()).map(([areaName, pkgs]) => {
+    const deliveredCount = pkgs.filter((p) => p.status === 'delivered').length;
+    const pendingCount = pkgs.filter((p) => p.status === 'pending').length;
+    const totalCodAmount = pkgs
+      .filter((p) => p.isCod)
+      .reduce((sum, p) => sum + p.codAmount, 0);
+
+    return {
+      areaName,
+      packages: pkgs,
+      totalPackages: pkgs.length,
+      deliveredCount,
+      pendingCount,
+      totalCodAmount,
+    };
+  });
+}
+
 /**
  * 2. Algoritma Cluster Sweep (Tersusun per Dusun / Blok - Satu Arah):
  * Mengelompokkan paket berdasarkan Dusun / Area jalan utama.

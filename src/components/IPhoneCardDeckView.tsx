@@ -21,6 +21,9 @@ import {
   AlertCircle,
   Edit3,
   Phone,
+  Layers,
+  CheckCheck,
+  X,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
@@ -60,6 +63,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [isDarkMode, setIsDarkMode] = useState(true); // Default dark AMOLED matching Refero screenshot
   const [isPinningGps, setIsPinningGps] = useState(false);
   const [pinToast, setPinToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isBatchAreaOpen, setIsBatchAreaOpen] = useState(false);
 
   const handleQuickPin = async (pkg: DeliveryPackage) => {
     if (!onQuickPinGps || isPinningGps) return;
@@ -181,8 +185,19 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     setTouchStartX(null);
   };
 
-  const isDelivered = currentPkg.status === 'delivered';
-  const isProblem = currentPkg.status === 'rescheduled' || currentPkg.status === 'failed';
+  const isDelivered = currentPkg?.status === 'delivered';
+  const isProblem = currentPkg?.status === 'rescheduled' || currentPkg?.status === 'failed';
+
+  const areaPkgs = currentPkg
+    ? packages.filter(
+        (p) => (p.areaOrStreet || '').trim() === (currentPkg.areaOrStreet || '').trim()
+      )
+    : [];
+  const areaPendingCount = areaPkgs.filter((p) => p.status === 'pending').length;
+  const areaDeliveredCount = areaPkgs.filter((p) => p.status === 'delivered').length;
+  const areaTotalCod = areaPkgs
+    .filter((p) => p.isCod)
+    .reduce((sum, p) => sum + p.codAmount, 0);
 
   return (
     <div
@@ -374,22 +389,41 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             </div>
 
             {/* Bottom inside Card: COD Tag / Non-COD Tag & Destination Area */}
-            <div className="flex items-center justify-between pt-3 border-t border-neutral-200/70">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-neutral-500 font-medium">Area:</span>
-                <span className="text-xs font-semibold text-neutral-800">
-                  {currentPkg.areaOrStreet}
-                </span>
+            <div className="flex flex-col gap-2 pt-3 border-t border-neutral-200/70">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-neutral-500 font-medium">Area:</span>
+                  <span className="text-xs font-bold text-neutral-800">
+                    {currentPkg.areaOrStreet}
+                  </span>
+                </div>
+
+                {currentPkg.isCod ? (
+                  <div className="bg-neutral-950 text-white px-3 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm">
+                    COD: {formatRupiah(currentPkg.codAmount)}
+                  </div>
+                ) : (
+                  <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold tracking-tight">
+                    Lunas (Non-COD)
+                  </div>
+                )}
               </div>
 
-              {currentPkg.isCod ? (
-                <div className="bg-neutral-950 text-white px-3 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm">
-                  COD: {formatRupiah(currentPkg.codAmount)}
-                </div>
-              ) : (
-                <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold tracking-tight">
-                  Lunas (Non-COD)
-                </div>
+              {/* Tombol Bawa Sekaligus per Area */}
+              {areaPkgs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setIsBatchAreaOpen(true)}
+                  className="w-full py-1.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 active:scale-98 text-amber-900 border border-amber-300 flex items-center justify-between text-xs font-bold transition cursor-pointer shadow-2xs"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Bawa Sekaligus ({areaPkgs.length} Paket di Area Ini)</span>
+                  </span>
+                  <span className="text-[10px] bg-amber-200/80 px-2 py-0.5 rounded-full font-sans">
+                    {areaDeliveredCount}/{areaPkgs.length} Terantar
+                  </span>
+                </button>
               )}
             </div>
           </div>
@@ -594,6 +628,170 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
         </div>
 
       </div>
+
+      {/* 9. Modal Bottom Sheet: Bawa Sekaligus Paket di Area Ini */}
+      {isBatchAreaOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="bg-white text-[#080808] w-full max-w-lg rounded-t-[32px] sm:rounded-[32px] border border-[#e4e4e7] p-5 sm:p-6 shadow-2xl max-h-[85vh] flex flex-col font-aspekta animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#e4e4e7]">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold text-[#080808]">
+                    🎒 Bawa Sekaligus dari Motor
+                  </span>
+                  <span className="bg-amber-100 text-amber-900 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                    {areaPkgs.length} Paket
+                  </span>
+                </div>
+                <p className="text-xs text-[#52525b] font-medium">
+                  Area: <strong>{currentPkg.areaOrStreet}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsBatchAreaOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#f4f4f5] text-[#696969] transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tip Banner */}
+            <div className="mt-3 p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-2">
+              <span>
+                💡 Ambil <strong>{areaPkgs.length} paket</strong> ini sekaligus ke tas Anda agar tidak bolak-balik ke motor.
+              </span>
+              {areaTotalCod > 0 && (
+                <span className="font-mono font-bold bg-amber-200/70 px-2.5 py-1 rounded-lg shrink-0">
+                  COD: {formatRupiah(areaTotalCod)}
+                </span>
+              )}
+            </div>
+
+            {/* Scrollable list of packages in this area */}
+            <div className="mt-3 flex-1 overflow-y-auto space-y-2.5 pr-1">
+              {areaPkgs.map((pkg, idx) => {
+                const isPkgDelivered = pkg.status === 'delivered';
+                return (
+                  <div
+                    key={pkg.id}
+                    className={`p-3.5 rounded-2xl border transition ${
+                      isPkgDelivered
+                        ? 'bg-[#f4f4f5] opacity-60 border-[#e4e4e7]'
+                        : 'bg-white border-[#e4e4e7] shadow-2xs'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-[#e4e4e7] text-neutral-800 text-[10px] font-bold flex items-center justify-center shrink-0">
+                            #{pkg.orderIndex}
+                          </span>
+                          <span className="font-bold text-xs text-[#080808] line-clamp-1">
+                            {pkg.recipientName}
+                          </span>
+                          {pkg.isCod ? (
+                            <span className="bg-neutral-900 text-white text-[10px] px-1.5 py-0.2 rounded-md font-bold">
+                              COD {formatRupiah(pkg.codAmount)}
+                            </span>
+                          ) : (
+                            <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded-md font-medium">
+                              Lunas
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-[11px] text-[#52525b] line-clamp-2">
+                          📍 {pkg.fullAddress}
+                        </p>
+
+                        {pkg.benchmark && (
+                          <p className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md inline-block">
+                            Patokan: {pkg.benchmark}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Status Toggle & WhatsApp */}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateStatus(
+                              pkg.id,
+                              pkg.status === 'delivered' ? 'pending' : 'delivered'
+                            )
+                          }
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 ${
+                            isPkgDelivered
+                              ? 'bg-neutral-800 text-white'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{isPkgDelivered ? 'Terkirim' : 'Kirim'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenWhatsApp(pkg)}
+                          className="p-1.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-emerald-700 transition cursor-pointer border border-[#e4e4e7]"
+                          title="Chat WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="mt-4 pt-3 border-t border-[#e4e4e7] flex items-center justify-between gap-2">
+              {areaPendingCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Tandai semua (${areaPendingCount}) paket di area "${currentPkg.areaOrStreet}" sebagai terkirim?`
+                      )
+                    ) {
+                      areaPkgs.forEach((p) => {
+                        if (p.status === 'pending') {
+                          onUpdateStatus(p.id, 'delivered');
+                        }
+                      });
+                      setIsBatchAreaOpen(false);
+                    }
+                  }}
+                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs rounded-full transition shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <CheckCheck className="w-4 h-4" />
+                  <span>Selesaikan Semua ({areaPendingCount} Paket)</span>
+                </button>
+              ) : (
+                <div className="flex-1 py-2 text-center text-xs text-emerald-700 font-bold bg-emerald-50 rounded-full border border-emerald-200">
+                  ✅ Semua paket di area ini telah terantar!
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsBatchAreaOpen(false)}
+                className="px-4 py-2.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] text-neutral-800 font-bold text-xs rounded-full transition cursor-pointer border border-[#e4e4e7]"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

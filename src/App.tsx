@@ -144,7 +144,7 @@ export function App() {
     }
   });
 
-  const [strategy, setStrategy] = useState<RouteStrategy>(settings.defaultStrategy || 'optimal-tsp');
+  const [strategy, setStrategy] = useState<RouteStrategy>(settings.defaultStrategy || 'cluster-sweep');
 
   // Paket: Otomatis sinkronkan ke 36 paket Branta 22 November jika masih demo lama atau data awal
   const [packages, setPackages] = useState<DeliveryPackage[]>(() => {
@@ -163,7 +163,7 @@ export function App() {
               INITIAL_SAMPLE_PACKAGES,
               DEFAULT_SETTINGS.dropPointLat,
               DEFAULT_SETTINGS.dropPointLng,
-              'optimal-tsp'
+              'cluster-sweep'
             );
           }
           return parsed;
@@ -173,14 +173,14 @@ export function App() {
         INITIAL_SAMPLE_PACKAGES,
         DEFAULT_SETTINGS.dropPointLat,
         DEFAULT_SETTINGS.dropPointLng,
-        'optimal-tsp'
+        'cluster-sweep'
       );
     } catch {
       return optimizeDeliveryRoute(
         INITIAL_SAMPLE_PACKAGES,
         DEFAULT_SETTINGS.dropPointLat,
         DEFAULT_SETTINGS.dropPointLng,
-        'optimal-tsp'
+        'cluster-sweep'
       );
     }
   });

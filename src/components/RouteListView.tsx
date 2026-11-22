@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Navigation,
   MessageCircle,
@@ -9,15 +9,22 @@ import {
   ChevronUp,
   ChevronDown,
   MapPin,
-  DollarSign,
   Home,
   RefreshCw,
   Check,
   Camera,
   Edit3,
+  Layers,
+  ListOrdered,
+  CheckCheck,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
-import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
+import {
+  getSingleNavigationUrl,
+  getStopLegInfo,
+  groupPackagesByArea,
+  formatRupiah,
+} from '../utils/routeOptimizer';
 import { findMatchingHouse } from '../utils/houseManager';
 
 interface RouteListViewProps {
@@ -47,9 +54,10 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   onEditPackage,
   onQuickEditPhone,
 }) => {
-  const [filter, setFilter] = React.useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
-  const [pinningPkgId, setPinningPkgId] = React.useState<string | null>(null);
-  const [pinnedPkgId, setPinnedPkgId] = React.useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
+  const [groupMode, setGroupMode] = useState<'area' | 'sequence'>('area');
+  const [pinningPkgId, setPinningPkgId] = useState<string | null>(null);
+  const [pinnedPkgId, setPinnedPkgId] = useState<string | null>(null);
 
   const handleQuickPin = async (pkg: DeliveryPackage) => {
     if (!onQuickPinGps || pinningPkgId) return;
@@ -62,14 +70,6 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
     } else {
       alert(res.error || 'Gagal mengunci GPS. Pastikan izin lokasi HP aktif.');
     }
-  };
-
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      maximumFractionDigits: 0,
-    }).format(val);
   };
 
   const handleOpenWhatsApp = (pkg: DeliveryPackage) => {
@@ -121,9 +121,325 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
     return true;
   });
 
+  const renderPackageCard = (pkg: DeliveryPackage) => {
+    const originalIndex = packages.findIndex((p) => p.id === pkg.id);
+    const isDelivered = pkg.status === 'delivered';
+    const isProblem = pkg.status === 'rescheduled' || pkg.status === 'failed';
+    const prevPkg = originalIndex > 0 ? packages[originalIndex - 1] : null;
+    const legInfo = getStopLegInfo(pkg, prevPkg, dropPointLat, dropPointLng);
+    const matchingHouse = savedHouses ? findMatchingHouse(savedHouses, pkg) : undefined;
+
+    return (
+      <div
+        key={pkg.id}
+        className={`rounded-[28px] p-4 sm:p-5 transition-all shadow-subtle border ${
+          isDelivered
+            ? 'bg-[#fafafa] opacity-60 border-[#e4e4e7]'
+            : isProblem
+            ? 'bg-[#fafafa] border-[#b2b2b2]'
+            : 'bg-[#fafafa] border-[#e4e4e7]/80'
+        }`}
+      >
+        {/* Card Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e4e4e7]">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#f4f4f5] text-[#080808] flex items-center justify-center font-bold text-xs tracking-tight border border-[#e4e4e7] shrink-0">
+              #{pkg.orderIndex}
+            </div>
+
+            <div>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="font-mono text-xs text-[#696969]">
+                  {pkg.trackingNumber}
+                </span>
+                <span className="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  📍 {prevPkg ? `+${legInfo.text} dari Stop #${originalIndex}` : `+${legInfo.text} dari Gudang`}
+                </span>
+                {pkg.isCod ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] text-[#fafafa]">
+                    COD: {formatRupiah(pkg.codAmount)}
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f4f4f5] text-[#696969] border border-[#e4e4e7]">
+                    Lunas
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                <h3 className="text-base sm:text-lg font-bold text-[#080808] tracking-[-0.015em]">
+                  {pkg.recipientName}
+                </h3>
+                {matchingHouse && (
+                  <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                    🏡 {matchingHouse.photoUrl ? 'Ada Foto' : 'Titik GPS'}
+                  </span>
+                )}
+              </div>
+              {/* Nomor HP dengan Tombol Isi / Edit Nomor Sensor */}
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onQuickEditPhone
+                      ? onQuickEditPhone(pkg)
+                      : onEditPackage && onEditPackage(pkg)
+                  }
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono transition active:scale-95 cursor-pointer border ${
+                    pkg.recipientPhone?.includes('*')
+                      ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 font-bold'
+                      : 'bg-[#f4f4f5] text-[#222222] border-[#e4e4e7] hover:bg-[#e4e4e7]'
+                  }`}
+                  title="Klik untuk mengisi / mengedit nomor telepon pelanggan"
+                >
+                  <Phone className="w-3 h-3 text-neutral-600" />
+                  <span>{pkg.recipientPhone || 'Belum ada nomor'}</span>
+                  {pkg.recipientPhone?.includes('*') ? (
+                    <span className="bg-amber-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-sans font-semibold">
+                      ✏️ Isi Nomor
+                    </span>
+                  ) : (
+                    <Edit3 className="w-2.5 h-2.5 text-neutral-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Move order & Edit Package Action */}
+          <div className="flex items-center gap-1.5 self-end sm:self-center">
+            {onEditPackage && (
+              <button
+                onClick={() => onEditPackage(pkg)}
+                title="Edit Alamat & Data Paket (Koreksi Hasil Scan)"
+                className="px-2.5 py-1.5 rounded-full bg-white hover:bg-[#e4e4e7] text-[#080808] border border-[#e4e4e7] flex items-center gap-1 text-[11px] font-bold cursor-pointer shadow-2xs active:scale-95 transition"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Edit</span>
+              </button>
+            )}
+
+            <button
+              disabled={originalIndex === 0}
+              onClick={() => onMovePackage(originalIndex, 'up')}
+              className="p-1.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] disabled:opacity-30 cursor-pointer"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+            <button
+              disabled={originalIndex === packages.length - 1}
+              onClick={() => onMovePackage(originalIndex, 'down')}
+              className="p-1.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] disabled:opacity-30 cursor-pointer"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Card Body */}
+        <div className="pt-3 space-y-2.5">
+          <div>
+            <p className="text-xs text-[#696969] font-medium">{pkg.areaOrStreet}</p>
+            <p className="text-xs sm:text-sm text-[#222222] leading-relaxed mt-0.5 max-w-[55ch]">
+              {pkg.fullAddress}
+            </p>
+          </div>
+
+          {pkg.benchmark && (
+            <div className="text-xs bg-[#f4f4f5] p-2.5 rounded-xl text-[#222222] border border-[#e4e4e7]/60">
+              <span className="text-[#696969] font-medium">Patokan: </span>
+              <span>{pkg.benchmark}</span>
+            </div>
+          )}
+
+          {/* Row 1 Actions: Maps, Chat WA, Telp */}
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <a
+              href={getSingleNavigationUrl(pkg.lat, pkg.lng, pkg.fullAddress)}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-1.5 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-2 px-3 rounded-full transition text-center"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              <span>Maps</span>
+            </a>
+
+            <button
+              onClick={() => handleOpenWhatsApp(pkg)}
+              className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2 px-3 rounded-full transition cursor-pointer border border-[#e4e4e7]"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-[#222222]" />
+              <span>Chat WA</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTelp(pkg)}
+              className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2 px-3 rounded-full transition text-center border border-[#e4e4e7] cursor-pointer"
+            >
+              <Phone className="w-3.5 h-3.5 text-[#222222]" />
+              <span>Telp</span>
+            </button>
+          </div>
+
+          {/* Row 2: 1-Tap Instant GPS Pinning & Optional Detail/Photo */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
+            {onQuickPinGps && (
+              <button
+                onClick={() => handleQuickPin(pkg)}
+                disabled={pinningPkgId === pkg.id}
+                className={`flex-1 flex items-center justify-center gap-1.5 font-bold text-xs py-2 px-3 rounded-full transition cursor-pointer border active:scale-95 ${
+                  pinnedPkgId === pkg.id
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                    : matchingHouse
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                }`}
+              >
+                {pinningPkgId === pkg.id ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Mengunci GPS...</span>
+                  </>
+                ) : pinnedPkgId === pkg.id ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-white" />
+                    <span>✅ Titik Terkunci!</span>
+                  </>
+                ) : matchingHouse ? (
+                  <>
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>📍 Perbarui Titik GPS Saya</span>
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-3.5 h-3.5 text-white" />
+                    <span>📍 Kunci Titik Lokasi Ini (1-Tap)</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {onSaveHousePoint && (
+              <button
+                onClick={() => onSaveHousePoint(pkg)}
+                title="Lihat patokan atau tambahkan foto rumah"
+                className={`flex items-center justify-center gap-1.5 font-medium text-xs py-2 px-3 rounded-full transition cursor-pointer border shrink-0 ${
+                  matchingHouse
+                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                    : 'bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] border-[#e4e4e7]'
+                }`}
+              >
+                {matchingHouse?.photoUrl ? (
+                  <>
+                    <Home className="w-3.5 h-3.5 text-amber-600" />
+                    <span>🏡 Lihat Foto</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-3.5 h-3.5 text-[#696969]" />
+                    <span>+ Foto / Ciri</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Status Toggle Bar */}
+          <div className="pt-2 border-t border-[#e4e4e7]/60 flex items-center justify-between gap-2 text-xs">
+            <button
+              onClick={() =>
+                onUpdateStatus(
+                  pkg.id,
+                  pkg.status === 'delivered' ? 'pending' : 'delivered'
+                )
+              }
+              className={`flex-1 py-1.5 px-3 rounded-full font-medium flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                pkg.status === 'delivered'
+                  ? 'bg-[#292929] text-[#fafafa]'
+                  : 'bg-[#f4f4f5] text-[#222222] hover:bg-[#e4e4e7]'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{pkg.status === 'delivered' ? 'Sudah Terkirim' : 'Tandai Terkirim'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                const note = prompt('Alasan tunda / rumah kosong:', 'Rumah kosong / pagar terkunci');
+                if (note !== null) {
+                  onUpdateStatus(pkg.id, 'rescheduled', note);
+                }
+              }}
+              className={`py-1.5 px-3 rounded-full font-medium flex items-center justify-center gap-1 transition cursor-pointer ${
+                pkg.status === 'rescheduled'
+                  ? 'bg-[#292929] text-[#fafafa]'
+                  : 'bg-[#f4f4f5] text-[#696969] hover:bg-[#e4e4e7]'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Kosong</span>
+            </button>
+
+            <button
+              onClick={() => {
+                const reason = prompt('Alasan gagal / retur (RTS):', 'Customer menolak paket COD');
+                if (reason !== null) {
+                  onUpdateStatus(pkg.id, 'failed', reason);
+                }
+              }}
+              className={`py-1.5 px-3 rounded-full font-medium flex items-center justify-center gap-1 transition cursor-pointer ${
+                pkg.status === 'failed'
+                  ? 'bg-[#292929] text-[#fafafa]'
+                  : 'bg-[#f4f4f5] text-[#696969] hover:bg-[#e4e4e7]'
+              }`}
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>Gagal</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const groupedAreas = groupPackagesByArea(filteredPackages);
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-4 font-aspekta bg-[#fafafa]">
-      {/* Pill Filter Strip: Fully Rounded Pills in Cream & Mid Ink */}
+      {/* View Switcher: Bawa Sekaligus per Area / Dusun VS Urutan Stop 1..36 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-3 rounded-2xl border border-[#e4e4e7] shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setGroupMode('area')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer border ${
+              groupMode === 'area'
+                ? 'bg-[#080808] text-white border-black shadow-xs'
+                : 'bg-[#f4f4f5] text-[#52525b] border-transparent hover:bg-[#e4e4e7]'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-amber-400" />
+            <span>🏘️ Kelompok per Area (Bawa Sekaligus)</span>
+          </button>
+
+          <button
+            onClick={() => setGroupMode('sequence')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer border ${
+              groupMode === 'sequence'
+                ? 'bg-[#080808] text-white border-black shadow-xs'
+                : 'bg-[#f4f4f5] text-[#52525b] border-transparent hover:bg-[#e4e4e7]'
+            }`}
+          >
+            <ListOrdered className="w-3.5 h-3.5" />
+            <span>📋 Urutan Stop 1..{packages.length}</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] text-[#71717a] font-medium flex items-center gap-1">
+          <span>💡 Hemat waktu: Ambil semua paket 1 area dari motor sekali jalan</span>
+        </div>
+      </div>
+
+      {/* Pill Filter Strip: Belum Diantar, Semua, Terkirim, Kendala */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs font-medium">
         <button
           onClick={() => setFilter('pending')}
@@ -177,289 +493,81 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
         </div>
       )}
 
-      {/* Floating Cards with 32px Radius & Layered Hairline Shadows */}
-      <div className="space-y-3.5">
-        {filteredPackages.map((pkg) => {
-          const originalIndex = packages.findIndex((p) => p.id === pkg.id);
-          const isDelivered = pkg.status === 'delivered';
-          const isProblem = pkg.status === 'rescheduled' || pkg.status === 'failed';
-          const prevPkg = originalIndex > 0 ? packages[originalIndex - 1] : null;
-          const legInfo = getStopLegInfo(pkg, prevPkg, dropPointLat, dropPointLng);
-          const matchingHouse = savedHouses ? findMatchingHouse(savedHouses, pkg) : undefined;
-
-          return (
-            <div
-              key={pkg.id}
-              className={`rounded-[32px] p-5 sm:p-6 transition-all shadow-subtle border border-[#e4e4e7]/70 ${
-                isDelivered
-                  ? 'bg-[#fafafa] opacity-60'
-                  : isProblem
-                  ? 'bg-[#fafafa] border-[#b2b2b2]'
-                  : 'bg-[#fafafa]'
-              }`}
-            >
-              {/* Card Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e4e4e7]">
-                <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 rounded-full bg-[#f4f4f5] text-[#080808] flex items-center justify-center font-normal text-sm tracking-tight border border-[#e4e4e7] shrink-0">
-                    #{pkg.orderIndex}
-                  </div>
-
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs text-[#696969]">
-                        {pkg.trackingNumber}
+      {/* Mode 1: Kelompok per Area / Dusun (Bawa Sekaligus dari Motor) */}
+      {groupMode === 'area' && (
+        <div className="space-y-6">
+          {groupedAreas.map((group) => (
+            <div key={group.areaName} className="space-y-3">
+              {/* Area Batch Header Card */}
+              <div className="bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-[24px] p-4 sm:p-5 shadow-md border border-neutral-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-base sm:text-lg font-bold tracking-tight">
+                      🏘️ {group.areaName}
+                    </span>
+                    <span className="bg-white/20 text-white text-[11px] px-2.5 py-0.5 rounded-full font-bold">
+                      {group.totalPackages} Paket
+                    </span>
+                    {group.deliveredCount === group.totalPackages ? (
+                      <span className="bg-emerald-500/30 text-emerald-300 text-[11px] px-2 py-0.5 rounded-full font-bold border border-emerald-400/40">
+                        ✅ Selesai
                       </span>
-                      <span className="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        📍 {prevPkg ? `+${legInfo.text} dari Stop #${originalIndex}` : `+${legInfo.text} dari Gudang`}
+                    ) : (
+                      <span className="bg-amber-500/30 text-amber-300 text-[11px] px-2 py-0.5 rounded-full font-bold border border-amber-400/40">
+                        {group.deliveredCount}/{group.totalPackages} Terantar
                       </span>
-                      {pkg.isCod ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#292929] text-[#fafafa]">
-                          COD: {formatRupiah(pkg.codAmount)}
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f4f4f5] text-[#696969] border border-[#e4e4e7]">
-                          Lunas
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                      <h3 className="text-lg font-medium text-[#080808] tracking-[-0.015em]">
-                        {pkg.recipientName}
-                      </h3>
-                      {matchingHouse && (
-                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                          🏡 {matchingHouse.photoUrl ? 'Ada Foto' : 'Titik GPS'}
-                        </span>
-                      )}
-                    </div>
-                    {/* Nomor HP dengan Tombol Isi / Edit Nomor Sensor */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onQuickEditPhone
-                            ? onQuickEditPhone(pkg)
-                            : onEditPackage && onEditPackage(pkg)
-                        }
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono transition active:scale-95 cursor-pointer border ${
-                          pkg.recipientPhone?.includes('*')
-                            ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 font-bold'
-                            : 'bg-[#f4f4f5] text-[#222222] border-[#e4e4e7] hover:bg-[#e4e4e7]'
-                        }`}
-                        title="Klik untuk mengisi / mengedit nomor telepon pelanggan"
-                      >
-                        <Phone className="w-3 h-3 text-neutral-600" />
-                        <span>{pkg.recipientPhone || 'Belum ada nomor'}</span>
-                        {pkg.recipientPhone?.includes('*') ? (
-                          <span className="bg-amber-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-sans font-semibold">
-                            ✏️ Isi Nomor
-                          </span>
-                        ) : (
-                          <Edit3 className="w-2.5 h-2.5 text-neutral-400" />
-                        )}
-                      </button>
-                    </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Move order & Edit Package Action */}
-                <div className="flex items-center gap-1.5 self-end sm:self-center">
-                  {onEditPackage && (
-                    <button
-                      onClick={() => onEditPackage(pkg)}
-                      title="Edit Alamat & Data Paket (Koreksi Hasil Scan)"
-                      className="px-2.5 py-1.5 rounded-full bg-white hover:bg-[#e4e4e7] text-[#080808] border border-[#e4e4e7] flex items-center gap-1 text-[11px] font-bold cursor-pointer shadow-2xs active:scale-95 transition"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Edit</span>
-                    </button>
-                  )}
-
-                  <button
-                    disabled={originalIndex === 0}
-                    onClick={() => onMovePackage(originalIndex, 'up')}
-                    className="p-1.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] disabled:opacity-30 cursor-pointer"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
-                  <button
-                    disabled={originalIndex === packages.length - 1}
-                    onClick={() => onMovePackage(originalIndex, 'down')}
-                    className="p-1.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] disabled:opacity-30 cursor-pointer"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="pt-3 space-y-3">
-                <div>
-                  <p className="text-xs text-[#696969] font-medium">{pkg.areaOrStreet}</p>
-                  <p className="text-sm text-[#222222] leading-relaxed mt-0.5 max-w-[55ch]">
-                    {pkg.fullAddress}
+                  <p className="text-xs text-neutral-300">
+                    🎒 <strong>Bawa Sekaligus:</strong> Parkir motor di area ini, ambil {group.totalPackages} paket di bawah ini ke tas kurir agar hemat waktu tanpa bolak-balik.
                   </p>
                 </div>
 
-                {pkg.benchmark && (
-                  <div className="text-xs bg-[#f4f4f5] p-3 rounded-[16px] text-[#222222] border border-[#e4e4e7]/60">
-                    <span className="text-[#696969] font-medium">Patokan: </span>
-                    <span>{pkg.benchmark}</span>
-                  </div>
-                )}
-
-                {/* Row 1 Actions: Maps, Chat WA, Telp */}
-                <div className="grid grid-cols-3 gap-2.5 pt-1">
-                  <a
-                    href={getSingleNavigationUrl(pkg.lat, pkg.lng, pkg.fullAddress)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-1.5 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-2.5 px-3 rounded-full transition text-center"
-                  >
-                    <Navigation className="w-3.5 h-3.5" />
-                    <span>Maps</span>
-                  </a>
-
-                  <button
-                    onClick={() => handleOpenWhatsApp(pkg)}
-                    className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2.5 px-3 rounded-full transition cursor-pointer border border-[#e4e4e7]"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5 text-[#222222]" />
-                    <span>Chat WA</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleTelp(pkg)}
-                    className="flex items-center justify-center gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs py-2.5 px-3 rounded-full transition text-center border border-[#e4e4e7] cursor-pointer"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-[#222222]" />
-                    <span>Telp</span>
-                  </button>
-                </div>
-
-                {/* Row 2: 1-Tap Instant GPS Pinning & Optional Detail/Photo */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
-                  {onQuickPinGps && (
+                <div className="flex items-center gap-2 shrink-0">
+                  {group.totalCodAmount > 0 && (
+                    <span className="text-xs font-mono bg-black/40 px-3 py-1.5 rounded-xl border border-white/10 text-amber-300 font-bold">
+                      COD: {formatRupiah(group.totalCodAmount)}
+                    </span>
+                  )}
+                  {group.pendingCount > 0 && (
                     <button
-                      onClick={() => handleQuickPin(pkg)}
-                      disabled={pinningPkgId === pkg.id}
-                      className={`flex-1 flex items-center justify-center gap-1.5 font-bold text-xs py-2 px-3 rounded-full transition cursor-pointer border active:scale-95 ${
-                        pinnedPkgId === pkg.id
-                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
-                          : matchingHouse
-                          ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-xs'
-                      }`}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Tandai semua (${group.pendingCount}) paket pending di area "${group.areaName}" sebagai terkirim?`
+                          )
+                        ) {
+                          group.packages.forEach((p) => {
+                            if (p.status === 'pending') {
+                              onUpdateStatus(p.id, 'delivered');
+                            }
+                          });
+                        }
+                      }}
+                      className="px-3.5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs transition cursor-pointer shadow-sm flex items-center gap-1.5"
                     >
-                      {pinningPkgId === pkg.id ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Mengunci GPS...</span>
-                        </>
-                      ) : pinnedPkgId === pkg.id ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-white" />
-                          <span>✅ Titik Terkunci!</span>
-                        </>
-                      ) : matchingHouse ? (
-                        <>
-                          <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>📍 Perbarui Titik GPS Saya</span>
-                        </>
-                      ) : (
-                        <>
-                          <MapPin className="w-3.5 h-3.5 text-white" />
-                          <span>📍 Kunci Titik Lokasi Ini (1-Tap)</span>
-                        </>
-                      )}
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      <span>Selesaikan Area ({group.pendingCount})</span>
                     </button>
                   )}
-
-                  {onSaveHousePoint && (
-                    <button
-                      onClick={() => onSaveHousePoint(pkg)}
-                      title="Lihat patokan atau tambahkan foto rumah"
-                      className={`flex items-center justify-center gap-1.5 font-medium text-xs py-2 px-3 rounded-full transition cursor-pointer border shrink-0 ${
-                        matchingHouse
-                          ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 font-bold'
-                          : 'bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] border-[#e4e4e7]'
-                      }`}
-                    >
-                      {matchingHouse?.photoUrl ? (
-                        <>
-                          <Home className="w-3.5 h-3.5 text-amber-600" />
-                          <span>🏡 Lihat Foto ({matchingHouse.recipientName.slice(0, 10)})</span>
-                        </>
-                      ) : (
-                        <>
-                          <Camera className="w-3.5 h-3.5 text-[#696969]" />
-                          <span>+ Foto / Ciri</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {/* Status Toggle Bar */}
-                <div className="pt-2 border-t border-[#e4e4e7]/60 flex items-center justify-between gap-2 text-xs">
-                  <button
-                    onClick={() =>
-                      onUpdateStatus(
-                        pkg.id,
-                        pkg.status === 'delivered' ? 'pending' : 'delivered'
-                      )
-                    }
-                    className={`flex-1 py-1.5 px-3 rounded-full font-medium flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                      pkg.status === 'delivered'
-                        ? 'bg-[#292929] text-[#fafafa]'
-                        : 'bg-[#f4f4f5] text-[#222222] hover:bg-[#e4e4e7]'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{pkg.status === 'delivered' ? 'Sudah Terkirim' : 'Tandai Terkirim'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const note = prompt('Alasan tunda / rumah kosong:', 'Rumah kosong / pagar terkunci');
-                      if (note !== null) {
-                        onUpdateStatus(pkg.id, 'rescheduled', note);
-                      }
-                    }}
-                    className={`py-1.5 px-3 rounded-full font-medium flex items-center justify-center gap-1 transition cursor-pointer ${
-                      pkg.status === 'rescheduled'
-                        ? 'bg-[#292929] text-[#fafafa]'
-                        : 'bg-[#f4f4f5] text-[#696969] hover:bg-[#e4e4e7]'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Kosong</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const reason = prompt('Alasan gagal / retur (RTS):', 'Customer menolak paket COD');
-                      if (reason !== null) {
-                        onUpdateStatus(pkg.id, 'failed', reason);
-                      }
-                    }}
-                    className={`py-1.5 px-3 rounded-full font-medium flex items-center justify-center gap-1 transition cursor-pointer ${
-                      pkg.status === 'failed'
-                        ? 'bg-[#292929] text-[#fafafa]'
-                        : 'bg-[#f4f4f5] text-[#696969] hover:bg-[#e4e4e7]'
-                    }`}
-                  >
-                    <XCircle className="w-3.5 h-3.5" />
-                    <span>Gagal</span>
-                  </button>
                 </div>
               </div>
+
+              {/* Paket-Paket di Dalam Area Ini */}
+              <div className="space-y-3 sm:pl-3 border-l-0 sm:border-l-2 sm:border-neutral-200">
+                {group.packages.map((pkg) => renderPackageCard(pkg))}
+              </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Mode 2: Urutan Stop Linear 1..36 */}
+      {groupMode === 'sequence' && (
+        <div className="space-y-3.5">
+          {filteredPackages.map((pkg) => renderPackageCard(pkg))}
+        </div>
+      )}
     </div>
   );
 };
