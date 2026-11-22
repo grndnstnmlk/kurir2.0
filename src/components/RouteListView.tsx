@@ -24,6 +24,8 @@ import {
   getStopLegInfo,
   groupPackagesByArea,
   formatRupiah,
+  calculateCodWithCourierFee,
+  formatCodWhatsAppInfo,
 } from '../utils/routeOptimizer';
 import { findMatchingHouse } from '../utils/houseManager';
 
@@ -81,12 +83,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
       }
     }
 
-    let codInfo = '';
-    if (pkg.isCod && pkg.codAmount > 0) {
-      codInfo = `🏷️ Paket COD (Bayar di Tempat): *${formatRupiah(pkg.codAmount)}* (Mohon siapkan uang pas ya Kak).`;
-    } else {
-      codInfo = '🏷️ Paket Non-COD (Sudah Lunas, tinggal serah terima).';
-    }
+    const codInfo = formatCodWhatsAppInfo(pkg.isCod, pkg.codAmount);
 
     let text = whatsAppTemplate
       .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
@@ -156,9 +153,14 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                   📍 {prevPkg ? `+${legInfo.text} dari Stop #${originalIndex}` : `+${legInfo.text} dari Gudang`}
                 </span>
                 {pkg.isCod ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] text-[#fafafa]">
-                    COD: {formatRupiah(pkg.codAmount)}
-                  </span>
+                  <div className="inline-flex items-center gap-1.5 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] text-[#fafafa]">
+                      Tagih: {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
+                    </span>
+                    <span className="text-[10px] text-neutral-500 font-medium">
+                      (Paket {formatRupiah(pkg.codAmount)} + Ongkir {calculateCodWithCourierFee(pkg.codAmount).formattedFee})
+                    </span>
+                  </div>
                 ) : (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f4f4f5] text-[#696969] border border-[#e4e4e7]">
                     Lunas

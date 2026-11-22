@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { DeliveryPackage, CourierSettings, PackageStatus, RouteStrategy, DailyHistoryEntry, SavedHousePoint } from './types';
 import { DEFAULT_SETTINGS, INITIAL_SAMPLE_PACKAGES, INITIAL_SAMPLE_HISTORY } from './utils/sampleData';
-import { optimizeDeliveryRoute, getMultiStopNavigationUrl, formatRupiah } from './utils/routeOptimizer';
+import { optimizeDeliveryRoute, getMultiStopNavigationUrl, formatRupiah, formatCodWhatsAppInfo } from './utils/routeOptimizer';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { IPhoneCardDeckView } from './components/IPhoneCardDeckView';
@@ -463,9 +463,7 @@ export function App() {
 
     if (autoOpenWhatsApp && targetPkg) {
       const pkg = targetPkg as DeliveryPackage;
-      const codInfo = pkg.isCod && pkg.codAmount > 0
-        ? `🏷️ Paket COD (Bayar di Tempat): *${formatRupiah(pkg.codAmount)}* (Mohon siapkan uang pas ya Kak).`
-        : '🏷️ Paket Non-COD (Sudah Lunas, tinggal serah terima).';
+      const codInfo = formatCodWhatsAppInfo(pkg.isCod, pkg.codAmount);
 
       let text = settings.customWhatsAppTemplate
         .replace(/{NAMA}/g, pkg.recipientName || 'Kak')

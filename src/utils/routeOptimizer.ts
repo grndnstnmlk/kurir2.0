@@ -11,6 +11,83 @@ export function formatRupiah(val: number): string {
   }).format(val);
 }
 
+export interface CodCalculation {
+  baseAmount: number;
+  courierFee: number;
+  totalAmount: number;
+  formattedBase: string;
+  formattedFee: string;
+  formattedTotal: string;
+}
+
+/**
+ * Menghitung Biaya Pengantaran Kurir (10% dari harga COD, dibulatkan ke ribuan terdekat)
+ * Contoh:
+ * - Rp 45.000 -> 10% = Rp 4.500 -> dibulatkan jadi Rp 5.000 -> Total Tagihan: Rp 50.000
+ * - Rp 68.000 -> 10% = Rp 6.800 -> dibulatkan jadi Rp 7.000 -> Total Tagihan: Rp 75.000
+ * - Rp 35.000 -> 10% = Rp 3.500 -> dibulatkan jadi Rp 4.000 -> Total Tagihan: Rp 39.000
+ * - Rp 110.000 -> 10% = Rp 11.000 -> dibulatkan jadi Rp 11.000 -> Total Tagihan: Rp 121.000
+ */
+export function calculateCodWithCourierFee(
+  baseCodAmount: number,
+  percentage: number = 10,
+  roundToThousands: boolean = true
+): CodCalculation {
+  if (baseCodAmount <= 0) {
+    return {
+      baseAmount: 0,
+      courierFee: 0,
+      totalAmount: 0,
+      formattedBase: 'Rp 0',
+      formattedFee: 'Rp 0',
+      formattedTotal: 'Rp 0',
+    };
+  }
+
+  const rawFee = baseCodAmount * (percentage / 100);
+  let courierFee = rawFee;
+
+  if (roundToThousands) {
+    courierFee = Math.max(1000, Math.round(rawFee / 1000) * 1000);
+  } else {
+    courierFee = Math.round(rawFee);
+  }
+
+  const totalAmount = baseCodAmount + courierFee;
+
+  return {
+    baseAmount: baseCodAmount,
+    courierFee,
+    totalAmount,
+    formattedBase: formatRupiah(baseCodAmount),
+    formattedFee: formatRupiah(courierFee),
+    formattedTotal: formatRupiah(totalAmount),
+  };
+}
+
+/**
+ * Menghasilkan blok pesan info COD untuk template balasan WhatsApp:
+ * Menambahkan biaya pengantaran kurir 10% dibulatkan ke ribuan terdekat.
+ */
+export function formatCodWhatsAppInfo(
+  isCod: boolean,
+  codAmount: number,
+  percentage: number = 10,
+  roundToThousands: boolean = true
+): string {
+  if (!isCod || codAmount <= 0) {
+    return '🏷️ *Paket Non-COD (Sudah Lunas)*\n(Tinggal serah terima paket).';
+  }
+
+  const calc = calculateCodWithCourierFee(codAmount, percentage, roundToThousands);
+
+  return `🏷️ *Paket COD (Bayar di Tempat):*
+• Harga Paket: ${calc.formattedBase}
+• Biaya Pengantaran Kurir: ${calc.formattedFee}
+👉 *Total Tagihan COD: ${calc.formattedTotal}*
+(Mohon siapkan uang pas ya Kak 🙏)`;
+}
+
 /**
  * Menghitung jarak lurus antara dua koordinat bumi menggunakan rumus Haversine (dalam km)
  */

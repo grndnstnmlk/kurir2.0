@@ -12,6 +12,7 @@ import {
   FileText,
 } from 'lucide-react';
 import type { DeliveryPackage, CourierSettings } from '../types';
+import { formatRupiah, calculateCodWithCourierFee } from '../utils/routeOptimizer';
 
 interface CodSummaryViewProps {
   packages: DeliveryPackage[];
@@ -89,29 +90,36 @@ export const CodSummaryView: React.FC<CodSummaryViewProps> = ({
     }
   }, [cashCounts]);
 
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      maximumFractionDigits: 0,
-    }).format(val);
-  };
-
   const codPackages = packages.filter((p) => p.isCod);
   const deliveredCod = codPackages.filter((p) => p.status === 'delivered');
   const pendingCod = codPackages.filter((p) => p.status === 'pending');
   const failedCod = codPackages.filter((p) => p.status === 'rescheduled' || p.status === 'failed');
 
+  // 1. Setoran ke Kantor J&T (Harga Asli Paket Tanpa Biaya Tambahan Kurir)
   const totalCollected = deliveredCod.reduce((sum, p) => sum + p.codAmount, 0);
   const totalPending = pendingCod.reduce((sum, p) => sum + p.codAmount, 0);
   const totalTarget = codPackages.reduce((sum, p) => sum + p.codAmount, 0);
+
+  // 2. Pendapatan Tambahan Biaya Pengantaran Kurir (10% Dibulatkan ke Ribuan)
+  const totalDeliveredCourierFees = deliveredCod.reduce(
+    (sum, p) => sum + calculateCodWithCourierFee(p.codAmount).courierFee,
+    0
+  );
+  const totalTargetCourierFees = codPackages.reduce(
+    (sum, p) => sum + calculateCodWithCourierFee(p.codAmount).courierFee,
+    0
+  );
+
+  // 3. Total Fisik Tagihan yang Ditarik dari Pembeli (Setoran J&T + Ongkir Kurir)
+  const totalBilledDelivered = totalCollected + totalDeliveredCourierFees;
+  const totalBilledTarget = totalTarget + totalTargetCourierFees;
 
   const physicalCashTotal = Object.entries(cashCounts).reduce(
     (sum, [denom, count]) => sum + Number(denom) * (count || 0),
     0
   );
 
-  const difference = physicalCashTotal - totalCollected;
+  const difference = physicalCashTotal - totalBilledDelivered;
 
   const handleCountChange = (denom: number, count: number) => {
     setCashCounts((prev) => ({
@@ -235,9 +243,11 @@ ${items}
 • Pending/Kosong: ${packages.filter((p) => p.status === 'rescheduled').length}
 • Gagal/Retur: ${packages.filter((p) => p.status === 'failed').length}
 
-💰 *REKAP KASIR COD:*
+💰 *REKAP KASIR & ONGKIR KURIR:*
 • Total Paket COD Selesai: ${deliveredCod.length} paket
-• Total Uang COD Tagihan Sistem: *${formatRupiah(totalCollected)}*
+• Setoran Kasir J&T (Harga Paket Asli): *${formatRupiah(totalCollected)}*
+• Pendapatan Ongkir Kurir (+10% Dibulatkan): *${formatRupiah(totalDeliveredCourierFees)}*
+👉 *Total Fisik Diterima Pembeli: ${formatRupiah(totalBilledDelivered)}*
 • Sisa COD Pending: ${formatRupiah(totalPending)}
 ${physicalBreakdown}
 Terima kasih 🙏 (Laporan via Kurir 2.0)`;
@@ -250,21 +260,50 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5 font-aspekta bg-[#fafafa]">
       
-      {/* Top Floating Card: Rekonsiliasi Kasir */}
-      <div className="bg-[#fafafa] rounded-[32px] p-6 sm:p-7 shadow-subtle border border-[#e4e4e7]/70">
-        <p className="font-fasthand text-2xl text-[#696969] leading-none mb-1">
-          rekonsiliasi kasir,
-        </p>
-        <span className="text-3xl sm:text-5xl font-normal text-[#080808] tracking-[-0.035em] block leading-none my-2">
-          {formatRupiah(totalCollected)}
-        </span>
-        <p className="text-xs text-[#696969] mt-1 max-w-md">
-          Total uang fisik COD yang wajib disetor ke kasir Drop Point sore ini dari {deliveredCod.length} paket berhasil.
-        </p>
+      {/* Top Floating Card: Rekonsiliasi Kasir & Ongkir Kurir */}
+      <div className="bg-[#fafafa] rounded-[32px] p-6 sm:p-7 shadow-subtle border border-[#e4e4e7]/70 space-y-4">
+        <div>
+          <p className="font-fasthand text-2xl text-[#696969] leading-none mb-1">
+            setoran kasir j&t,
+          </p>
+          <span className="text-3xl sm:text-5xl font-normal text-[#080808] tracking-[-0.035em] block leading-none my-2">
+            {formatRupiah(totalCollected)}
+          </span>
+          <p className="text-xs text-[#696969] mt-1 max-w-md">
+            Total uang fisik COD yang wajib disetor ke kasir Drop Point sore ini ({deliveredCod.length} paket berhasil).
+          </p>
+        </div>
+
+        {/* Breakdown Card: Setoran J&T vs Ongkir Kurir */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="p-4 rounded-2xl bg-white border border-[#e4e4e7] shadow-2xs">
+            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block mb-1">
+              🎉 Milik Kurir (Kantong Sendiri)
+            </span>
+            <div className="text-xl font-bold text-neutral-900">
+              {formatRupiah(totalDeliveredCourierFees)}
+            </div>
+            <p className="text-[11px] text-neutral-500 mt-0.5">
+              Pendapatan ongkir kurir (+10% dibulatkan) dari {deliveredCod.length} paket terantar.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-neutral-900 text-white shadow-2xs">
+            <span className="text-[11px] font-semibold text-amber-300 bg-neutral-800 px-2.5 py-0.5 rounded-full inline-block mb-1">
+              💵 Total Tagih ke Pembeli
+            </span>
+            <div className="text-xl font-bold text-white">
+              {formatRupiah(totalBilledDelivered)}
+            </div>
+            <p className="text-[11px] text-neutral-300 mt-0.5">
+              Total fisik diterima: Setoran J&T ({formatRupiah(totalCollected)}) + Ongkir Anda ({formatRupiah(totalDeliveredCourierFees)}).
+            </p>
+          </div>
+        </div>
 
         <button
           onClick={handleCopyReport}
-          className="mt-4 flex items-center justify-center gap-2 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-3 px-6 rounded-full transition shadow-sm cursor-pointer"
+          className="mt-2 flex items-center justify-center gap-2 bg-[#292929] hover:bg-[#080808] active:scale-95 text-[#fafafa] font-medium text-xs py-3 px-6 rounded-full transition shadow-sm cursor-pointer"
         >
           {copied ? (
             <>
@@ -274,7 +313,7 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
           ) : (
             <>
               <Share2 className="w-3.5 h-3.5" />
-              <span>Salin Laporan WhatsApp (Termasuk Rincian Fisik)</span>
+              <span>Salin Laporan WhatsApp (Termasuk Rincian Fisik & Ongkir)</span>
             </>
           )}
         </button>
@@ -318,13 +357,18 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
             ) : (
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             )}
-            <span>
-              {difference === 0
-                ? '✅ Uang Fisik PAS Sempurna dengan Rekap Tagihan Sistem!'
-                : difference > 0
-                ? `ℹ️ Uang fisik LEBIH ${formatRupiah(difference)} dari catatan sistem.`
-                : `⚠️ Uang fisik KURANG ${formatRupiah(Math.abs(difference))} dari catatan sistem! Cek kembali paket COD.`}
-            </span>
+            <div>
+              <span>
+                {difference === 0
+                  ? `✅ Uang Fisik PAS Sempurna dengan Total Tagihan (${formatRupiah(totalBilledDelivered)})!`
+                  : difference > 0
+                  ? `ℹ️ Uang fisik di dompet LEBIH ${formatRupiah(difference)} dari total tagihan pembeli.`
+                  : `⚠️ Uang fisik di dompet KURANG ${formatRupiah(Math.abs(difference))} dari total tagihan pembeli (${formatRupiah(totalBilledDelivered)})!`}
+              </span>
+              <p className="text-[10px] text-neutral-600 font-normal mt-0.5">
+                Setoran Kasir J&T: {formatRupiah(totalCollected)} | Milik Kurir Sendiri: {formatRupiah(totalDeliveredCourierFees)}
+              </p>
+            </div>
           </div>
         )}
 

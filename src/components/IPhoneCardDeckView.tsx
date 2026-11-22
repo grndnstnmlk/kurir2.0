@@ -26,7 +26,13 @@ import {
   X,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
-import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
+import {
+  getSingleNavigationUrl,
+  getStopLegInfo,
+  calculateCodWithCourierFee,
+  formatCodWhatsAppInfo,
+  formatRupiah,
+} from '../utils/routeOptimizer';
 import { findMatchingHouse } from '../utils/houseManager';
 
 interface IPhoneCardDeckViewProps {
@@ -147,12 +153,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
       }
     }
 
-    let codInfo = '';
-    if (pkg.isCod && pkg.codAmount > 0) {
-      codInfo = `🏷️ Paket COD (Bayar di Tempat): *${formatRupiah(pkg.codAmount)}* (Mohon siapkan uang pas ya Kak).`;
-    } else {
-      codInfo = '🏷️ Paket Non-COD (Sudah Lunas, tinggal serah terima).';
-    }
+    const codInfo = formatCodWhatsAppInfo(pkg.isCod, pkg.codAmount);
 
     let text = whatsAppTemplate
       .replace(/{NAMA}/g, pkg.recipientName || 'Kak')
@@ -399,8 +400,13 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 </div>
 
                 {currentPkg.isCod ? (
-                  <div className="bg-neutral-950 text-white px-3 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm">
-                    COD: {formatRupiah(currentPkg.codAmount)}
+                  <div className="flex flex-col items-end">
+                    <div className="bg-neutral-950 text-white px-3 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm flex items-center gap-1.5">
+                      <span>Tagih: {calculateCodWithCourierFee(currentPkg.codAmount).formattedTotal}</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500 font-medium mt-0.5">
+                      Paket {formatRupiah(currentPkg.codAmount)} + Ongkir {calculateCodWithCourierFee(currentPkg.codAmount).formattedFee}
+                    </span>
                   </div>
                 ) : (
                   <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold tracking-tight">
@@ -694,8 +700,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                             {pkg.recipientName}
                           </span>
                           {pkg.isCod ? (
-                            <span className="bg-neutral-900 text-white text-[10px] px-1.5 py-0.2 rounded-md font-bold">
-                              COD {formatRupiah(pkg.codAmount)}
+                            <span className="bg-neutral-900 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">
+                              Tagih {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
                             </span>
                           ) : (
                             <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded-md font-medium">
