@@ -136,17 +136,13 @@ export function App() {
       if (res.success && res.houses && res.houses.length > 0) {
         setSavedHouses(res.houses);
 
-        // Sinkronkan koordinat dan status paket aktif dengan titik rumah yang sudah dikunci kurir di iPhone
+        // Sinkronkan koordinat paket aktif dengan titik rumah yang sudah dikunci kurir di iPhone
         setPackages((prev) => {
           let hasChange = false;
           const updated = prev.map((p) => {
             const match = findMatchingHouse(res.houses!, p);
             if (match) {
-              const isDeliveredByHouse =
-                match.notes?.includes(p.trackingNumber) ||
-                (match.notes?.includes('berhasil diantar') && p.status !== 'delivered');
-
-              if (p.lat !== match.lat || p.lng !== match.lng || (isDeliveredByHouse && p.status !== 'delivered')) {
+              if (p.lat !== match.lat || p.lng !== match.lng) {
                 hasChange = true;
                 return {
                   ...p,
@@ -154,7 +150,6 @@ export function App() {
                   lng: match.lng,
                   areaOrStreet: match.areaOrStreet || p.areaOrStreet,
                   benchmark: match.benchmark || p.benchmark,
-                  status: isDeliveredByHouse ? ('delivered' as PackageStatus) : p.status,
                 };
               }
             }
@@ -169,7 +164,30 @@ export function App() {
     const unsubscribe = subscribeToSessionRealtime(sessionId, (remotePkgs, remoteSettings) => {
       setPackages((curr) => {
         if (JSON.stringify(curr) === JSON.stringify(remotePkgs)) return curr;
-        return remotePkgs;
+
+        // Smart merge: jika paket lokal baru saja diselesaikan / diretur di perangkat ini,
+        // jangan biarkan status remote yang tertinggal menimpanya kembali ke pending
+        const merged = remotePkgs.map((rPkg) => {
+          const localPkg = curr.find((l) => l.id === rPkg.id);
+          if (!localPkg) return rPkg;
+
+          if (
+            (localPkg.status === 'delivered' || localPkg.status === 'returned') &&
+            rPkg.status === 'pending'
+          ) {
+            return {
+              ...rPkg,
+              status: localPkg.status,
+              deliveredAt: localPkg.deliveredAt,
+              returnedAt: localPkg.returnedAt,
+              returnReason: localPkg.returnReason,
+              statusNotes: localPkg.statusNotes || rPkg.statusNotes,
+            };
+          }
+          return rPkg;
+        });
+
+        return merged;
       });
       if (remoteSettings) {
         setSettings((prev) => ({ ...prev, ...remoteSettings }));
@@ -378,8 +396,9 @@ export function App() {
     returnReason?: string
   ) => {
     const now = new Date().toISOString();
-    setPackages((prev) =>
-      prev.map((pkg) => {
+    let updatedList: DeliveryPackage[] = [];
+    setPackages((prev) => {
+      updatedList = prev.map((pkg) => {
         if (pkg.id === id) {
           return {
             ...pkg,
@@ -394,8 +413,17 @@ export function App() {
           };
         }
         return pkg;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(updatedList));
+      } catch (e) {
+        console.error('Failed to save to localStorage:', e);
+      }
+      return updatedList;
+    });
+
+    // Push seketika ke cloud database tanpa menunggu timer debounce
+    pushSessionToCloud(sessionId, updatedList, settings);
   };
 
   const handleOpenSaveHouseForPkg = (pkg: DeliveryPackage) => {

@@ -230,20 +230,59 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     window.open(`sms:${phone}?body=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const handlePromptReturn = (pkg: DeliveryPackage) => {
-    if (pkg.status === 'returned') {
-      onUpdateStatus(pkg.id, 'pending');
-      setPinToast({
-        type: 'success',
-        text: `Status Paket #${pkg.orderIndex} dikembalikan ke Belum Diantar.`,
-      });
-      setTimeout(() => setPinToast(null), 3000);
+  const handleMarkDelivered = (pkg: DeliveryPackage) => {
+    if (pkg.status === 'delivered') {
+      if (
+        confirm(
+          `Status paket #${pkg.orderIndex} (${pkg.recipientName}) saat ini SUDAH TERKIRIM.\n\nApakah Anda ingin membatalkannya dan mengembalikan ke status Belum Diantar?`
+        )
+      ) {
+        onUpdateStatus(pkg.id, 'pending');
+        setPinToast({
+          type: 'success',
+          text: `Status Paket #${pkg.orderIndex} dikembalikan ke Belum Diantar.`,
+        });
+        setTimeout(() => setPinToast(null), 2500);
+      }
       return;
     }
 
+    onUpdateStatus(pkg.id, 'delivered');
+    setPinToast({
+      type: 'success',
+      text: `✅ Paket #${pkg.orderIndex} (${pkg.recipientName}) Selesai Terkirim!`,
+    });
+
+    // Otomatis geser ke antaran berikutnya secara mulus setelah 700ms
+    setTimeout(() => {
+      if (safeIndex < displayPackages.length - 1) {
+        setCurrentIndex(safeIndex + 1);
+      }
+      setPinToast(null);
+    }, 700);
+  };
+
+  const handlePromptReturn = (pkg: DeliveryPackage) => {
+    if (pkg.status === 'returned') {
+      if (
+        confirm(
+          `Status paket #${pkg.orderIndex} (${pkg.recipientName}) saat ini SUDAH DIRETUR.\n\nApakah Anda ingin membatalkan retur dan mengembalikan ke status Belum Diantar?`
+        )
+      ) {
+        onUpdateStatus(pkg.id, 'pending');
+        setPinToast({
+          type: 'success',
+          text: `Status Paket #${pkg.orderIndex} dikembalikan ke Belum Diantar.`,
+        });
+        setTimeout(() => setPinToast(null), 2500);
+      }
+      return;
+    }
+
+    const defaultReason = 'Permintaan Penerima (Retur Saja)';
     const reason = prompt(
       `Penerima minta paket diretur?\nMasukkan alasan retur paket #${pkg.orderIndex} (${pkg.recipientName}):`,
-      'Permintaan Penerima (Retur Saja)'
+      defaultReason
     );
 
     if (reason !== null && reason.trim().length > 0) {
@@ -253,13 +292,13 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
         text: `📦 Paket #${pkg.orderIndex} (${pkg.recipientName}) ditandai DIRETUR ke Drop Point!`,
       });
 
-      // Otomatis geser ke kartu paket antaran berikutnya setelah 1.2 detik
+      // Otomatis geser ke kartu paket antaran berikutnya setelah 700ms
       setTimeout(() => {
         if (safeIndex < displayPackages.length - 1) {
           setCurrentIndex(safeIndex + 1);
         }
         setPinToast(null);
-      }, 1200);
+      }, 700);
     }
   };
 
@@ -364,24 +403,39 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           </div>
 
           <button
-            onClick={() => {
-              if (isDelivered || isReturned) {
-                onUpdateStatus(currentPkg.id, 'pending');
-              } else {
-                onUpdateStatus(currentPkg.id, 'delivered');
-              }
-            }}
-            className={`text-sm font-semibold transition cursor-pointer px-2 py-1 rounded-full ${
+            type="button"
+            onClick={() => handleMarkDelivered(currentPkg)}
+            className={`text-xs sm:text-sm font-bold transition cursor-pointer px-3 py-1.5 rounded-full border shadow-2xs flex items-center gap-1.5 active:scale-95 ${
               isDelivered
-                ? 'text-emerald-400 hover:text-emerald-300'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                 : isReturned
-                ? 'text-red-400 hover:text-red-300'
-                : isDarkMode
-                ? 'text-white hover:text-neutral-300'
-                : 'text-neutral-900 hover:text-neutral-600'
+                ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-sm'
             }`}
+            title={
+              isDelivered
+                ? 'Sudah Terkirim (Klik jika ingin membatalkan)'
+                : isReturned
+                ? 'Sudah Diretur (Klik jika ingin membatalkan)'
+                : 'Klik untuk menandai paket ini selesai terkirim'
+            }
           >
-            {isDelivered ? 'Terkirim ✓' : isReturned ? 'Diretur ↩' : 'Selesai'}
+            {isDelivered ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Terkirim ✓</span>
+              </>
+            ) : isReturned ? (
+              <>
+                <RotateCcw className="w-3.5 h-3.5 text-red-400" />
+                <span>Diretur ↩</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                <span>Tandai Selesai</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -775,12 +829,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
         {/* 7. Bottom Action Link: "View in AR" Position -> "Tandai Paket Terkirim" & "Retur" */}
         <div className="flex flex-wrap items-center justify-center pt-3 pb-2 z-10 gap-3">
           <button
-            onClick={() =>
-              onUpdateStatus(
-                currentPkg.id,
-                currentPkg.status === 'delivered' ? 'pending' : 'delivered'
-              )
-            }
+            onClick={() => handleMarkDelivered(currentPkg)}
             className={`flex items-center gap-1.5 text-xs sm:text-sm font-semibold py-1.5 px-3 rounded-full transition cursor-pointer active:scale-95 ${
               isDelivered
                 ? 'text-emerald-400 hover:text-emerald-300'

@@ -50,6 +50,20 @@ export function setActiveSessionId(newSessionId: string): string {
   return clean;
 }
 
+export const CLIENT_ID: string = (() => {
+  try {
+    if (typeof window !== 'undefined') {
+      let id = sessionStorage.getItem('kurir2_client_id');
+      if (!id) {
+        id = 'cid_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+        sessionStorage.setItem('kurir2_client_id', id);
+      }
+      return id;
+    }
+  } catch {}
+  return 'cid_default';
+})();
+
 /**
  * Deteksi apakah perangkat saat ini adalah Desktop/PC atau Smartphone
  */
@@ -75,7 +89,7 @@ export async function pushSessionToCloud(
       session_id: sessionId,
       packages: packages as any,
       settings: (settings || {}) as any,
-      last_device: getDeviceTypeLabel(),
+      last_device: `${getDeviceTypeLabel()} [${CLIENT_ID}]`,
       updated_at: new Date().toISOString(),
     };
 
@@ -148,6 +162,14 @@ export function subscribeToSessionRealtime(
         (payload: any) => {
           const newData = payload.new;
           if (newData && Array.isArray(newData.packages)) {
+            // Abaikan perubahan yang dipicu oleh tab / perangkat ini sendiri (mencegah echo race condition yang menimpa status baru)
+            if (
+              newData.last_device &&
+              typeof newData.last_device === 'string' &&
+              newData.last_device.includes(CLIENT_ID)
+            ) {
+              return;
+            }
             onRemoteChange(newData.packages, newData.settings, newData.last_device);
           }
         }
