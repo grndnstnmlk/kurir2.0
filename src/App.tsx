@@ -24,6 +24,7 @@ import {
   deleteHousePoint,
   quickRecordCurrentGpsPoint,
   fetchHousesFromSupabase,
+  deliverWithHousePhoto,
 } from './utils/houseManager';
 import {
   getLocalLicense,
@@ -390,6 +391,48 @@ export function App() {
   };
 
   /**
+   * Alur Cepat 1-Langkah: Foto Rumah -> Kunci GPS -> Paket Selesai Kirim
+   */
+  const handleDeliverWithPhoto = async (
+    pkg: DeliveryPackage,
+    photoFile: File
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { savedHouse, updatedHouses } = await deliverWithHousePhoto(pkg, photoFile);
+      setSavedHouses(updatedHouses);
+
+      setPackages((prev) => {
+        const next = prev.map((p) => {
+          if (p.id === pkg.id) {
+            return {
+              ...p,
+              status: 'delivered' as PackageStatus,
+              deliveredAt: new Date().toISOString(),
+              lat: savedHouse.lat,
+              lng: savedHouse.lng,
+              areaOrStreet: savedHouse.areaOrStreet || p.areaOrStreet,
+              benchmark: savedHouse.benchmark || p.benchmark,
+            };
+          }
+          return p;
+        });
+        pushSessionToCloud(sessionId, next, settings);
+        try {
+          localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(next));
+        } catch (e) {
+          console.error('Failed to persist package status update:', e);
+        }
+        return next;
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Failed to deliver with photo:', err);
+      return { success: false, error: err?.message || 'Gagal memproses foto rumah' };
+    }
+  };
+
+  /**
    * Kunci titik GPS lapangan saat kurir berdiri di lokasi manapun (tanpa terikat paket)
    */
   const handleQuickPinCurrentLocation = async (): Promise<{
@@ -655,6 +698,7 @@ export function App() {
             savedHouses={savedHouses}
             onSaveHousePoint={handleOpenSaveHouseForPkg}
             onQuickPinGps={handleQuickPinGps}
+            onDeliverWithPhoto={handleDeliverWithPhoto}
             onEditPackage={handleOpenEditPackage}
             onQuickEditPhone={handleOpenQuickPhone}
           />
@@ -671,6 +715,7 @@ export function App() {
             savedHouses={savedHouses}
             onSaveHousePoint={handleOpenSaveHouseForPkg}
             onQuickPinGps={handleQuickPinGps}
+            onDeliverWithPhoto={handleDeliverWithPhoto}
             onEditPackage={handleOpenEditPackage}
             onQuickEditPhone={handleOpenQuickPhone}
           />

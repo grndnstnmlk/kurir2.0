@@ -46,6 +46,7 @@ interface IPhoneCardDeckViewProps {
   savedHouses?: SavedHousePoint[];
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
   onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
+  onDeliverWithPhoto?: (pkg: DeliveryPackage, file: File) => Promise<{ success: boolean; error?: string }>;
   onEditPackage?: (pkg: DeliveryPackage) => void;
   onQuickEditPhone?: (pkg: DeliveryPackage) => void;
 }
@@ -61,6 +62,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   savedHouses = [],
   onSaveHousePoint,
   onQuickPinGps,
+  onDeliverWithPhoto,
   onEditPackage,
   onQuickEditPhone,
 }) => {
@@ -68,8 +70,46 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true); // Default dark AMOLED matching Refero screenshot
   const [isPinningGps, setIsPinningGps] = useState(false);
+  const [isDeliveringWithPhoto, setIsDeliveringWithPhoto] = useState(false);
   const [pinToast, setPinToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isBatchAreaOpen, setIsBatchAreaOpen] = useState(false);
+  const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleTriggerCamera = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+      cameraInputRef.current.click();
+    }
+  };
+
+  const handleCameraPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentPkg || !onDeliverWithPhoto) return;
+
+    setIsDeliveringWithPhoto(true);
+    setPinToast(null);
+
+    const res = await onDeliverWithPhoto(currentPkg, file);
+    setIsDeliveringWithPhoto(false);
+
+    if (res.success) {
+      setPinToast({
+        type: 'success',
+        text: `🎉 Foto rumah tersimpan & Paket #${currentPkg.orderIndex} Selesai Terkirim!`,
+      });
+      // Otomatis geser ke kartu paket antaran berikutnya setelah 1.2 detik
+      setTimeout(() => {
+        if (safeIndex < packages.length - 1) {
+          setCurrentIndex(safeIndex + 1);
+        }
+      }, 1200);
+    } else {
+      setPinToast({
+        type: 'error',
+        text: res.error || 'Gagal memproses foto rumah.',
+      });
+    }
+  };
 
   const handleQuickPin = async (pkg: DeliveryPackage) => {
     if (!onQuickPinGps || isPinningGps) return;
@@ -515,7 +555,17 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           </a>
         </div>
 
-        {/* 6b. 1-Tap Kunci Titik Lokasi & Tambah Foto Action */}
+        {/* Input file kamera tersembunyi (langsung buka kamera iPhone dengan capture="environment") */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleCameraPhotoSelected}
+        />
+
+        {/* 6b. Alur Utama: Foto Rumah & Paket Selesai Kirim */}
         <div className="pt-2.5 z-10 space-y-2">
           {/* Toast Notification */}
           {pinToast && (
@@ -535,53 +585,68 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             </div>
           )}
 
-          {/* Primary Action: 1-Tap Instant GPS Point Recorder */}
-          {onQuickPinGps && (
-            <button
-              onClick={() => handleQuickPin(currentPkg)}
-              disabled={isPinningGps}
-              className={`w-full py-3.5 px-4 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95 border ${
-                matchingHouse
-                  ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-950/40'
-              }`}
-            >
-              {isPinningGps ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                  <span>Sedang Mengunci Titik GPS Anda...</span>
-                </>
-              ) : matchingHouse ? (
-                <>
-                  <MapPin className="w-4 h-4 text-emerald-400" />
-                  <span>📍 Perbarui Titik GPS ke Posisi Saya Sekarang</span>
-                </>
-              ) : (
-                <>
-                  <MapPin className="w-4 h-4 text-white" />
-                  <span>📍 Kunci Titik Lokasi Saya (1-Tap)</span>
-                </>
-              )}
-            </button>
-          )}
+          {/* Tombol Utama: Foto Rumah & Paket Selesai Kirim */}
+          <button
+            type="button"
+            onClick={handleTriggerCamera}
+            disabled={isDeliveringWithPhoto || isPinningGps}
+            className={`w-full py-4 px-4 rounded-2xl text-sm font-bold transition flex items-center justify-center gap-2.5 cursor-pointer shadow-lg active:scale-95 border ${
+              isDelivered
+                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400 shadow-emerald-950/50'
+            }`}
+          >
+            {isDeliveringWithPhoto ? (
+              <>
+                <RefreshCw className="w-5 h-5 animate-spin text-white" />
+                <span>Menyimpan Foto & Menyelesaikan Antaran...</span>
+              </>
+            ) : isDelivered ? (
+              <>
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>✅ Paket Terkirim (Ketuk untuk Foto Ulang)</span>
+              </>
+            ) : (
+              <>
+                <Camera className="w-5 h-5 text-white" />
+                <span>📸 Foto Rumah & Selesai Kirim</span>
+              </>
+            )}
+          </button>
 
-          {/* Secondary Action: Optional Photo / Edit Benchmark */}
-          {onSaveHousePoint && (
-            <div className="flex items-center justify-between px-2 text-[11px]">
-              <span className="text-neutral-400">
-                {matchingHouse
-                  ? `✅ Titik tersimpan (Akurasi: ±${Math.round(matchingHouse.accuracyMeters || 4)}m)`
-                  : 'Cukup 1-klik tanpa ketik atau foto'}
-              </span>
+          {/* Opsi Pendukung Cepat (Kunci GPS Saja / Lihat Foto Tersimpan) */}
+          <div className="flex items-center justify-between px-2 text-[11px] text-neutral-400 pt-0.5">
+            {onQuickPinGps && (
               <button
-                onClick={() => onSaveHousePoint(currentPkg)}
-                className="font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer transition"
+                type="button"
+                onClick={() => handleQuickPin(currentPkg)}
+                disabled={isPinningGps || isDeliveringWithPhoto}
+                className="hover:text-emerald-400 flex items-center gap-1 cursor-pointer transition disabled:opacity-50"
               >
-                <Camera className="w-3.5 h-3.5" />
-                <span>{matchingHouse?.photoUrl ? 'Lihat/Ganti Foto' : '+ Tambah Foto/Ciri'}</span>
+                <MapPin className="w-3 h-3 text-emerald-500" />
+                <span>{isPinningGps ? 'Mengunci GPS...' : matchingHouse ? 'Update GPS Saja' : 'Kunci GPS Saja'}</span>
               </button>
-            </div>
-          )}
+            )}
+
+            {matchingHouse?.photoUrl ? (
+              <button
+                type="button"
+                onClick={() => onSaveHousePoint && onSaveHousePoint(currentPkg)}
+                className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 cursor-pointer transition"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>🏡 Lihat Foto Rumah</span>
+              </button>
+            ) : onSaveHousePoint ? (
+              <button
+                type="button"
+                onClick={() => onSaveHousePoint(currentPkg)}
+                className="hover:text-amber-300 flex items-center gap-1 text-neutral-400 cursor-pointer transition"
+              >
+                <span>+ Catat Patokan/Ciri</span>
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {/* 7. Bottom Action Link: "View in AR" Position -> "Tandai Paket Terkirim" */}

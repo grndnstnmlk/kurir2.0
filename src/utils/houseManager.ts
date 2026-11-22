@@ -447,3 +447,63 @@ export function findMatchingHouse(
 
   return undefined;
 }
+
+/**
+ * Alur Cepat 1-Langkah: Foto Rumah -> Kunci GPS -> Paket Selesai Kirim
+ * Dipanggil saat kurir memfoto rumah penerima di depan lokasi.
+ * 1. Mengambil foto rumah & mengompresnya (~50-80 KB)
+ * 2. Mengunci titik GPS lokasi kurir secara presisi
+ * 3. Menyimpan titik rumah ke buku katalog & push otomatis ke Supabase
+ * 4. Mengembalikan data titik rumah yang diperbarui
+ */
+export async function deliverWithHousePhoto(
+  pkg: DeliveryPackage,
+  photoFile: File,
+  customGps?: { lat: number; lng: number; accuracy?: number }
+): Promise<{ savedHouse: SavedHousePoint; updatedHouses: SavedHousePoint[] }> {
+  // 1. Kompres foto rumah
+  const photoUrl = await compressHousePhoto(photoFile);
+
+  // 2. Ambil GPS saat ini jika belum ada
+  let lat = customGps?.lat ?? pkg.lat;
+  let lng = customGps?.lng ?? pkg.lng;
+  let accuracy = customGps?.accuracy;
+
+  try {
+    const loc = await getCurrentGpsLocation();
+    lat = loc.lat;
+    lng = loc.lng;
+    accuracy = loc.accuracy;
+  } catch (e) {
+    console.warn('Could not get fresh GPS, using existing package coordinates:', e);
+  }
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+  const currentHouses = getSavedHousePoints();
+  const matched = findMatchingHouse(currentHouses, pkg);
+
+  const houseId = matched?.id || (pkg.id ? `house-pkg-${pkg.id}` : `house-${Date.now()}`);
+
+  const houseToSave: SavedHousePoint = {
+    id: houseId,
+    recipientName: pkg.recipientName || matched?.recipientName || 'Pelanggan J&T',
+    recipientPhone: pkg.recipientPhone || matched?.recipientPhone || '',
+    fullAddress: pkg.fullAddress || matched?.fullAddress || '',
+    areaOrStreet: pkg.areaOrStreet || matched?.areaOrStreet || 'Branta Pamekasan',
+    benchmark: matched?.benchmark || 'Foto rumah bukti serah terima paket',
+    photoUrl,
+    lat,
+    lng,
+    accuracyMeters: accuracy,
+    notes: `Paket ${pkg.trackingNumber} berhasil diantar pada ${dateStr} jam ${timeStr}`,
+    savedAt: matched?.savedAt || now.toISOString(),
+    updatedAt: now.toISOString(),
+    deliveryCount: (matched?.deliveryCount || 0) + 1,
+  };
+
+  const updatedHouses = saveHousePoint(houseToSave);
+  return { savedHouse: houseToSave, updatedHouses };
+}

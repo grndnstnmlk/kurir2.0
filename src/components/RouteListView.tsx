@@ -39,6 +39,7 @@ interface RouteListViewProps {
   savedHouses?: SavedHousePoint[];
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
   onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
+  onDeliverWithPhoto?: (pkg: DeliveryPackage, file: File) => Promise<{ success: boolean; error?: string }>;
   onEditPackage?: (pkg: DeliveryPackage) => void;
   onQuickEditPhone?: (pkg: DeliveryPackage) => void;
 }
@@ -53,6 +54,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   savedHouses = [],
   onSaveHousePoint,
   onQuickPinGps,
+  onDeliverWithPhoto,
   onEditPackage,
   onQuickEditPhone,
 }) => {
@@ -60,6 +62,30 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   const [groupMode, setGroupMode] = useState<'area' | 'sequence'>('area');
   const [pinningPkgId, setPinningPkgId] = useState<string | null>(null);
   const [pinnedPkgId, setPinnedPkgId] = useState<string | null>(null);
+  const [deliveringPkgId, setDeliveringPkgId] = useState<string | null>(null);
+  const [targetPhotoPkg, setTargetPhotoPkg] = useState<DeliveryPackage | null>(null);
+  const routeCameraInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleTriggerPhotoDelivery = (pkg: DeliveryPackage) => {
+    setTargetPhotoPkg(pkg);
+    if (routeCameraInputRef.current) {
+      routeCameraInputRef.current.value = '';
+      routeCameraInputRef.current.click();
+    }
+  };
+
+  const handleRouteCameraFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !targetPhotoPkg || !onDeliverWithPhoto) return;
+
+    setDeliveringPkgId(targetPhotoPkg.id);
+    const res = await onDeliverWithPhoto(targetPhotoPkg, file);
+    setDeliveringPkgId(null);
+
+    if (!res.success) {
+      alert(res.error || 'Gagal memproses foto rumah');
+    }
+  };
 
   const handleQuickPin = async (pkg: DeliveryPackage) => {
     if (!onQuickPinGps || pinningPkgId) return;
@@ -284,67 +310,74 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
             </button>
           </div>
 
-          {/* Row 2: 1-Tap Instant GPS Pinning & Optional Detail/Photo */}
+          {/* Row 2: 📸 Foto Rumah & Paket Selesai Kirim */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
-            {onQuickPinGps && (
+            {onDeliverWithPhoto && (
               <button
-                onClick={() => handleQuickPin(pkg)}
-                disabled={pinningPkgId === pkg.id}
-                className={`flex-1 flex items-center justify-center gap-1.5 font-bold text-xs py-2 px-3 rounded-full transition cursor-pointer border active:scale-95 ${
-                  pinnedPkgId === pkg.id
-                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
-                    : matchingHouse
-                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                type="button"
+                onClick={() => handleTriggerPhotoDelivery(pkg)}
+                disabled={deliveringPkgId === pkg.id}
+                className={`flex-1 flex items-center justify-center gap-1.5 font-bold text-xs py-2.5 px-4 rounded-2xl transition cursor-pointer active:scale-95 border shadow-sm ${
+                  pkg.status === 'delivered'
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-950/20'
                 }`}
               >
-                {pinningPkgId === pkg.id ? (
+                {deliveringPkgId === pkg.id ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Mengunci GPS...</span>
+                    <span>Menyimpan Foto & Menyelesaikan...</span>
                   </>
-                ) : pinnedPkgId === pkg.id ? (
+                ) : pkg.status === 'delivered' ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-white" />
-                    <span>✅ Titik Terkunci!</span>
-                  </>
-                ) : matchingHouse ? (
-                  <>
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>📍 Perbarui Titik GPS Saya</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Terkirim (Ketuk untuk Foto Ulang)</span>
                   </>
                 ) : (
                   <>
-                    <MapPin className="w-3.5 h-3.5 text-white" />
-                    <span>📍 Kunci Titik Lokasi Ini (1-Tap)</span>
+                    <Camera className="w-4 h-4 text-white" />
+                    <span>📸 Foto Rumah & Selesai Kirim</span>
                   </>
                 )}
               </button>
             )}
 
-            {onSaveHousePoint && (
-              <button
-                onClick={() => onSaveHousePoint(pkg)}
-                title="Lihat patokan atau tambahkan foto rumah"
-                className={`flex items-center justify-center gap-1.5 font-medium text-xs py-2 px-3 rounded-full transition cursor-pointer border shrink-0 ${
-                  matchingHouse
-                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 font-bold'
-                    : 'bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#222222] border-[#e4e4e7]'
-                }`}
-              >
-                {matchingHouse?.photoUrl ? (
-                  <>
-                    <Home className="w-3.5 h-3.5 text-amber-600" />
-                    <span>🏡 Lihat Foto</span>
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-3.5 h-3.5 text-[#696969]" />
-                    <span>+ Foto / Ciri</span>
-                  </>
-                )}
-              </button>
-            )}
+            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+              {onQuickPinGps && (
+                <button
+                  type="button"
+                  onClick={() => handleQuickPin(pkg)}
+                  disabled={pinningPkgId === pkg.id}
+                  title="Kunci GPS titik rumah ini saja tanpa foto"
+                  className="p-2 rounded-full hover:bg-[#f4f4f5] text-[#222222] border border-[#e4e4e7] transition cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="hidden sm:inline">GPS Saja</span>
+                </button>
+              )}
+
+              {matchingHouse?.photoUrl ? (
+                <button
+                  type="button"
+                  onClick={() => onSaveHousePoint && onSaveHousePoint(pkg)}
+                  title="Lihat foto rumah yang tersimpan"
+                  className="py-1.5 px-3 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
+                >
+                  <Home className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Lihat Foto</span>
+                </button>
+              ) : onSaveHousePoint ? (
+                <button
+                  type="button"
+                  onClick={() => onSaveHousePoint(pkg)}
+                  title="Catat ciri-ciri / patokan rumah manual"
+                  className="py-1.5 px-3 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#696969] border border-[#e4e4e7] text-[11px] font-medium flex items-center gap-1 cursor-pointer transition"
+                >
+                  <Edit3 className="w-3 h-3" />
+                  <span>Ciri Rumah</span>
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {/* Status Toggle Bar */}
@@ -409,6 +442,16 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-4 font-aspekta bg-[#fafafa]">
+      {/* Input kamera tersembunyi untuk foto rumah */}
+      <input
+        ref={routeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleRouteCameraFileChange}
+      />
+
       {/* View Switcher: Bawa Sekaligus per Area / Dusun VS Urutan Stop 1..36 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-3 rounded-2xl border border-[#e4e4e7] shadow-2xs">
         <div className="flex items-center gap-1.5">
