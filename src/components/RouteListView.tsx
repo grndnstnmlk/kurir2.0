@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Check,
   Camera,
+  Edit3,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
@@ -29,6 +30,7 @@ interface RouteListViewProps {
   savedHouses?: SavedHousePoint[];
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
   onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
+  onEditPackage?: (pkg: DeliveryPackage) => void;
 }
 
 export const RouteListView: React.FC<RouteListViewProps> = ({
@@ -41,6 +43,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   savedHouses = [],
   onSaveHousePoint,
   onQuickPinGps,
+  onEditPackage,
 }) => {
   const [filter, setFilter] = React.useState<'all' | 'pending' | 'delivered' | 'problem'>('pending');
   const [pinningPkgId, setPinningPkgId] = React.useState<string | null>(null);
@@ -213,8 +216,19 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                   </div>
                 </div>
 
-                {/* Move order up/down */}
-                <div className="flex items-center gap-1 self-end sm:self-center">
+                {/* Move order & Edit Package Action */}
+                <div className="flex items-center gap-1.5 self-end sm:self-center">
+                  {onEditPackage && (
+                    <button
+                      onClick={() => onEditPackage(pkg)}
+                      title="Edit Alamat & Data Paket (Koreksi Hasil Scan)"
+                      className="px-2.5 py-1.5 rounded-full bg-white hover:bg-[#e4e4e7] text-[#080808] border border-[#e4e4e7] flex items-center gap-1 text-[11px] font-bold cursor-pointer shadow-2xs active:scale-95 transition"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+
                   <button
                     disabled={originalIndex === 0}
                     onClick={() => onMovePackage(originalIndex, 'up')}

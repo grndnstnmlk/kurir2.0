@@ -19,6 +19,7 @@ import {
   Camera,
   RefreshCw,
   AlertCircle,
+  Edit3,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import { getSingleNavigationUrl, getStopLegInfo } from '../utils/routeOptimizer';
@@ -35,6 +36,7 @@ interface IPhoneCardDeckViewProps {
   savedHouses?: SavedHousePoint[];
   onSaveHousePoint?: (pkg: DeliveryPackage) => void;
   onQuickPinGps?: (pkg: DeliveryPackage) => Promise<{ success: boolean; accuracy?: number; error?: string }>;
+  onEditPackage?: (pkg: DeliveryPackage) => void;
 }
 
 export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
@@ -48,6 +50,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   savedHouses = [],
   onSaveHousePoint,
   onQuickPinGps,
+  onEditPackage,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -261,12 +264,23 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 </span>
               </div>
 
-              {/* Exact Refero Yellow/Amber Parcel Icon Badge (Top-Right) */}
-              <div
-                className="w-11 h-11 rounded-2xl bg-[#f59e0b] text-neutral-950 flex items-center justify-center shadow-md shadow-amber-500/20 active:scale-95 transition cursor-pointer"
-                title="Paket Siap Kirim"
-              >
-                <PackageIcon className="w-6 h-6 stroke-[2.2]" />
+              {/* Actions & Parcel Badge (Top-Right) */}
+              <div className="flex items-center gap-1.5">
+                {onEditPackage && (
+                  <button
+                    onClick={() => onEditPackage(currentPkg)}
+                    title="Edit Alamat & Detail Paket (Ketik di PC)"
+                    className="p-2.5 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 flex items-center justify-center transition cursor-pointer border border-neutral-200 active:scale-95"
+                  >
+                    <Edit3 className="w-4 h-4 text-blue-600" />
+                  </button>
+                )}
+                <div
+                  className="w-11 h-11 rounded-2xl bg-[#f59e0b] text-neutral-950 flex items-center justify-center shadow-md shadow-amber-500/20 active:scale-95 transition cursor-pointer"
+                  title="Paket Siap Kirim"
+                >
+                  <PackageIcon className="w-6 h-6 stroke-[2.2]" />
+                </div>
               </div>
             </div>
 

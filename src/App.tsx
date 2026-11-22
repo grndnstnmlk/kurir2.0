@@ -15,6 +15,8 @@ import { SubscriptionModal } from './components/SubscriptionModal';
 import { AdminLicenseModal } from './components/AdminLicenseModal';
 import { SaveHouseModal } from './components/SaveHouseModal';
 import { SavedHousesModal } from './components/SavedHousesModal';
+import { SyncSessionModal } from './components/SyncSessionModal';
+import { EditPackageModal } from './components/EditPackageModal';
 import {
   getSavedHousePoints,
   saveHousePoint,
@@ -27,6 +29,16 @@ import {
   type LocalLicenseInfo,
 } from './utils/licenseManager';
 import { requestPersistentStorage } from './utils/backupManager';
+import {
+  getActiveSessionId,
+  setActiveSessionId,
+  pushSessionToCloud,
+  fetchSessionFromCloud,
+  subscribeToSessionRealtime,
+  pushHistoryEntryToCloud,
+  fetchHistoryFromCloud,
+  deleteHistoryFromCloud,
+} from './utils/cloudSyncManager';
 import { Camera } from 'lucide-react';
 
 const STORAGE_KEY_PACKAGES = 'kurir2_packages_v1';
@@ -49,6 +61,12 @@ export function App() {
   // Status Lisensi Pengguna
   const [license, setLicense] = useState<LocalLicenseInfo | null>(() => getLocalLicense());
 
+  // Sesi Bersama Realtime PC & iPhone
+  const [sessionId, setSessionId] = useState<string>(() => getActiveSessionId());
+  const [isSyncSessionOpen, setIsSyncSessionOpen] = useState(false);
+  const [editingPkg, setEditingPkg] = useState<DeliveryPackage | null>(null);
+  const [isEditPkgOpen, setIsEditPkgOpen] = useState(false);
+
   useEffect(() => {
     // Kunci memori penyimpanan HP agar tidak dihapus otomatis oleh sistem Android/iOS
     requestPersistentStorage();
@@ -58,6 +76,45 @@ export function App() {
       if (updated) setLicense(updated);
     });
   }, []);
+
+  // Sinkronisasi Sesi Realtime Supabase (PC & iPhone otomatis tersambung)
+  useEffect(() => {
+    // 1. Ambil sesi aktif terkini dari Supabase
+    fetchSessionFromCloud(sessionId).then((res) => {
+      if (res.success && res.packages && res.packages.length > 0) {
+        setPackages(res.packages);
+      }
+    });
+
+    // 2. Ambil riwayat gabungan dari Supabase
+    fetchHistoryFromCloud(sessionId).then((res) => {
+      if (res.success && res.history && res.history.length > 0) {
+        setHistory((prev) => {
+          const map = new Map<string, DailyHistoryEntry>();
+          res.history!.forEach((h) => map.set(h.id, h));
+          prev.forEach((h) => map.set(h.id, h));
+          return Array.from(map.values()).sort(
+            (a, b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime()
+          );
+        });
+      }
+    });
+
+    // 3. Berlangganan Realtime Supabase
+    const unsubscribe = subscribeToSessionRealtime(sessionId, (remotePkgs, remoteSettings) => {
+      setPackages((curr) => {
+        if (JSON.stringify(curr) === JSON.stringify(remotePkgs)) return curr;
+        return remotePkgs;
+      });
+      if (remoteSettings) {
+        setSettings((prev) => ({ ...prev, ...remoteSettings }));
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [sessionId]);
 
   // Settings: Otomatis sinkronkan ke Drop Point J&T Pamekasan (Trunojoyo)
   const [settings, setSettings] = useState<CourierSettings>(() => {
@@ -155,6 +212,16 @@ export function App() {
       console.error('Failed to save history to localStorage', e);
     }
   }, [history]);
+
+  // Otomatis push update sesi ke cloud saat ada perubahan data di PC atau iPhone
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (packages.length > 0) {
+        pushSessionToCloud(sessionId, packages, settings);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [packages, sessionId, settings]);
 
   // Special Admin URL access via hash (#admin) or query (?admin=1)
   useEffect(() => {
@@ -358,6 +425,34 @@ export function App() {
   const handleResetData = () => {
     setPackages([]);
     localStorage.removeItem(STORAGE_KEY_PACKAGES);
+    pushSessionToCloud(sessionId, [], settings);
+  };
+
+  const handleOpenEditPackage = (pkg: DeliveryPackage) => {
+    setEditingPkg(pkg);
+    setIsEditPkgOpen(true);
+  };
+
+  const handleSaveEditedPackage = (updatedPkg: DeliveryPackage) => {
+    setPackages((prev) => {
+      const next = prev.map((p) => (p.id === updatedPkg.id ? updatedPkg : p));
+      pushSessionToCloud(sessionId, next, settings);
+      return next;
+    });
+  };
+
+  const handleDeleteSinglePackage = (pkgId: string) => {
+    setPackages((prev) => {
+      const filtered = prev.filter((p) => p.id !== pkgId);
+      const reordered = filtered.map((p, idx) => ({ ...p, orderIndex: idx + 1 }));
+      pushSessionToCloud(sessionId, reordered, settings);
+      return reordered;
+    });
+  };
+
+  const handleUpdateSessionId = (newId: string) => {
+    const clean = setActiveSessionId(newId);
+    setSessionId(clean);
   };
 
   const handleLoadSampleData = () => {
@@ -368,6 +463,7 @@ export function App() {
       strategy
     );
     setPackages(reordered);
+    pushSessionToCloud(sessionId, reordered, settings);
   };
 
   const handleArchiveToday = (notes?: string) => {
@@ -406,12 +502,15 @@ export function App() {
     };
 
     setHistory((prev) => [newHistoryEntry, ...prev]);
+    pushHistoryEntryToCloud(sessionId, newHistoryEntry);
     setPackages([]);
+    pushSessionToCloud(sessionId, [], settings);
     setActiveTab('history');
   };
 
   const handleDeleteHistory = (id: string) => {
     setHistory((prev) => prev.filter((h) => h.id !== id));
+    deleteHistoryFromCloud(id);
   };
 
   const handleRestoreHistory = (entry: DailyHistoryEntry) => {
@@ -438,6 +537,7 @@ export function App() {
         onOpenAdminPanel={() => setIsAdminOpen(true)}
         onOpenHousesDirectory={() => setIsHousesDirectoryOpen(true)}
         savedHousesCount={savedHouses.length}
+        onOpenSyncSession={() => setIsSyncSessionOpen(true)}
       />
 
       {/* Stats Bar shown only on route list and map tabs */}
@@ -476,6 +576,7 @@ export function App() {
             savedHouses={savedHouses}
             onSaveHousePoint={handleOpenSaveHouseForPkg}
             onQuickPinGps={handleQuickPinGps}
+            onEditPackage={handleOpenEditPackage}
           />
         )}
 
@@ -490,6 +591,7 @@ export function App() {
             savedHouses={savedHouses}
             onSaveHousePoint={handleOpenSaveHouseForPkg}
             onQuickPinGps={handleQuickPinGps}
+            onEditPackage={handleOpenEditPackage}
           />
         )}
 
@@ -617,6 +719,28 @@ export function App() {
         }}
         onDeleteHouse={handleHouseDeleted}
         onQuickPinCurrentLocation={handleQuickPinCurrentLocation}
+      />
+
+      {/* Tautkan Sesi Realtime PC & iPhone Modal */}
+      <SyncSessionModal
+        isOpen={isSyncSessionOpen}
+        onClose={() => setIsSyncSessionOpen(false)}
+        currentSessionId={sessionId}
+        onUpdateSessionId={handleUpdateSessionId}
+      />
+
+      {/* Edit & Koreksi Data Paket Modal (Ketik Manual di PC) */}
+      <EditPackageModal
+        isOpen={isEditPkgOpen}
+        onClose={() => {
+          setIsEditPkgOpen(false);
+          setEditingPkg(null);
+        }}
+        pkg={editingPkg}
+        onSavePackage={handleSaveEditedPackage}
+        onDeletePackage={handleDeleteSinglePackage}
+        dropPointLat={settings.dropPointLat}
+        dropPointLng={settings.dropPointLng}
       />
     </div>
   );

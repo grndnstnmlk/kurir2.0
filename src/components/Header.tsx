@@ -6,6 +6,7 @@ import {
   Lock,
   Key,
   Home,
+  Smartphone,
 } from 'lucide-react';
 import type { LocalLicenseInfo } from '../utils/licenseManager';
 import { getDaysRemaining, isLicenseValid } from '../utils/licenseManager';
@@ -22,6 +23,7 @@ interface HeaderProps {
   onOpenAdminPanel: () => void;
   onOpenHousesDirectory?: () => void;
   savedHousesCount?: number;
+  onOpenSyncSession?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAdminPanel,
   onOpenHousesDirectory,
   savedHousesCount = 0,
+  onOpenSyncSession,
 }) => {
   const isDarkTab = activeTab === 'deck';
   const [clickCount, setClickCount] = useState(0);
@@ -121,6 +124,21 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Lock className="w-3.5 h-3.5 text-red-600" />
               <span>Aktivasi</span>
+            </button>
+          )}
+
+          {onOpenSyncSession && (
+            <button
+              onClick={onOpenSyncSession}
+              title="Tautkan Sesi Realtime antara PC & iPhone"
+              className={`flex items-center gap-1.5 active:scale-95 font-medium text-xs py-1.5 px-3 rounded-full transition shadow-xs cursor-pointer border ${
+                isDarkTab
+                  ? 'bg-neutral-900 hover:bg-neutral-800 text-emerald-400 border-neutral-700'
+                  : 'bg-white hover:bg-neutral-100 text-emerald-800 border-[#e4e4e7]'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="hidden sm:inline">Sesi PC & iPhone</span>
             </button>
           )}
 

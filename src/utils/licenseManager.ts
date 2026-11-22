@@ -112,13 +112,23 @@ export async function activateLicenseCode(
       };
     }
 
-    // 3. Cek penguncian perangkat (Anti-sharing)
-    if (lic.device_id && lic.device_id !== deviceId) {
-      return {
-        success: false,
-        message:
-          'Kode akses ini sudah terdaftar di HP kurir lain. Hubungi admin jika Anda berganti HP.',
-      };
+    // 3. Cek penguncian perangkat (Mendukung hingga 2 perangkat untuk kurir: PC + iPhone)
+    const existingDevices = lic.device_id ? lic.device_id.split(',').map((d) => d.trim()) : [];
+    if (existingDevices.length > 0 && !existingDevices.includes(deviceId)) {
+      if (existingDevices.length < 3) {
+        // Otomatis daftarkan perangkat kedua kurir (PC & HP)
+        const updatedDevices = [...existingDevices, deviceId].join(',');
+        await supabase
+          .from('licenses')
+          .update({ device_id: updatedDevices })
+          .eq('id', lic.id);
+      } else {
+        return {
+          success: false,
+          message:
+            'Kode akses ini sudah terdaftar di 2 perangkat (PC & iPhone). Hubungi admin jika Anda berganti perangkat.',
+        };
+      }
     }
 
     // 4. Hitung tanggal kadaluarsa
@@ -150,11 +160,17 @@ export async function activateLicenseCode(
         };
       }
 
-      // Pastikan device_id terkunci
+      // Pastikan deviceId terdaftar
       if (!lic.device_id) {
         await supabase
           .from('licenses')
           .update({ device_id: deviceId })
+          .eq('id', lic.id);
+      } else if (!existingDevices.includes(deviceId) && existingDevices.length < 3) {
+        const updatedDevices = [...existingDevices, deviceId].join(',');
+        await supabase
+          .from('licenses')
+          .update({ device_id: updatedDevices })
           .eq('id', lic.id);
       }
     }
