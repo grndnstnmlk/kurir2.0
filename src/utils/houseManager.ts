@@ -83,7 +83,7 @@ export function getSavedHousePoints(): SavedHousePoint[] {
     const raw = localStorage.getItem(STORAGE_KEY_SAVED_HOUSES);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
     // Set initial sample houses jika baru pertama kali
     saveHousesToLocalStorageSafely(INITIAL_SAMPLE_HOUSES);
@@ -216,9 +216,22 @@ export async function fetchHousesFromSupabase(sessionId?: string): Promise<{
       query = query.or(`session_id.eq.${activeSession},session_id.is.null`);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    // Fallback: Jika filter sesi tidak menghasilkan data, ambil seluruh titik rumah tersimpan di database
+    if (!data || data.length === 0) {
+      const fallback = await supabase
+        .from('saved_houses')
+        .select('*')
+        .order('saved_at', { ascending: false });
+      if (fallback.data && fallback.data.length > 0) {
+        data = fallback.data;
+        error = fallback.error;
+      }
+    }
 
     if (error) {
+      console.warn('Supabase fetch houses warning:', error.message);
       return { success: false, error: error.message };
     }
 

@@ -735,11 +735,10 @@ export function App() {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col font-aspekta transition-colors duration-300 ${
-      activeTab === 'deck'
-        ? 'bg-[#000000] text-white selection:bg-white selection:text-black'
-        : 'bg-[#fafafa] text-[#222222] selection:bg-[#292929] selection:text-[#fafafa] bg-grid-faint'
-    }`}>
+    <div className={`min-h-screen flex flex-col font-aspekta transition-colors duration-300 ${activeTab === 'deck'
+      ? 'bg-[#000000] text-white selection:bg-white selection:text-black'
+      : 'bg-[#fafafa] text-[#222222] selection:bg-[#292929] selection:text-[#fafafa] bg-grid-faint'
+      }`}>
       {/* Three-Zone Navigation Bar */}
       <Header
         activeTab={activeTab}
