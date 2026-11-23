@@ -29,7 +29,7 @@ import {
   formatCodWhatsAppInfo,
   generateJntDeliveryMessage,
 } from '../utils/routeOptimizer';
-import { findMatchingHouse } from '../utils/houseManager';
+import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
 
 interface RouteListViewProps {
   packages: DeliveryPackage[];
@@ -66,9 +66,11 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   const [pinnedPkgId, setPinnedPkgId] = useState<string | null>(null);
   const [deliveringPkgId, setDeliveringPkgId] = useState<string | null>(null);
   const [targetPhotoPkg, setTargetPhotoPkg] = useState<DeliveryPackage | null>(null);
+  const targetPhotoPkgRef = React.useRef<DeliveryPackage | null>(null);
   const routeCameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const handleTriggerPhotoDelivery = (pkg: DeliveryPackage) => {
+    targetPhotoPkgRef.current = pkg;
     setTargetPhotoPkg(pkg);
     if (routeCameraInputRef.current) {
       routeCameraInputRef.current.value = '';
@@ -78,10 +80,11 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
 
   const handleRouteCameraFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !targetPhotoPkg || !onDeliverWithPhoto) return;
+    const pkg = targetPhotoPkgRef.current || targetPhotoPkg;
+    if (!file || !pkg || !onDeliverWithPhoto) return;
 
-    setDeliveringPkgId(targetPhotoPkg.id);
-    const res = await onDeliverWithPhoto(targetPhotoPkg, file);
+    setDeliveringPkgId(pkg.id);
+    const res = await onDeliverWithPhoto(pkg, file);
     setDeliveringPkgId(null);
 
     if (!res.success) {
@@ -166,6 +169,12 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
     const prevPkg = originalIndex > 0 ? packages[originalIndex - 1] : null;
     const legInfo = getStopLegInfo(pkg, prevPkg, dropPointLat, dropPointLng);
     const matchingHouse = savedHouses ? findMatchingHouse(savedHouses, pkg) : undefined;
+    const isCustomerMatch = matchingHouse ? isSameCustomer(matchingHouse, pkg) : false;
+    const pkgPhotoUrl =
+      pkg.proofPhotoUrl ||
+      (matchingHouse?.photoUrl && isCustomerMatch
+        ? matchingHouse.photoUrl
+        : undefined);
 
     return (
       <div
@@ -236,9 +245,9 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                 <h3 className="text-base sm:text-lg font-bold text-[#080808] tracking-[-0.015em]">
                   {pkg.recipientName}
                 </h3>
-                {matchingHouse && (
+                {matchingHouse && isCustomerMatch && (
                   <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                    🏡 {matchingHouse.photoUrl ? 'Ada Foto' : 'Titik GPS'}
+                    🏡 {pkgPhotoUrl ? 'Ada Foto' : 'Titik GPS'}
                   </span>
                 )}
               </div>
@@ -404,7 +413,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                 </button>
               )}
 
-              {matchingHouse?.photoUrl ? (
+              {pkgPhotoUrl ? (
                 <button
                   type="button"
                   onClick={() => onSaveHousePoint && onSaveHousePoint(pkg)}

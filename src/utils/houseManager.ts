@@ -403,40 +403,41 @@ export async function quickRecordCurrentGpsPoint(
 
   const currentHouses = getSavedHousePoints();
   const matched = pkg ? findMatchingHouse(currentHouses, pkg) : undefined;
+  const isMatchValid = matched && pkg && isSameCustomer(matched, pkg);
 
-  const houseId = matched?.id || (pkg?.id ? `house-pkg-${pkg.id}` : `house-gps-${Date.now()}`);
+  const houseId = isMatchValid ? matched.id : (pkg?.id ? `house-pkg-${pkg.id}` : `house-gps-${Date.now()}`);
   
   const recipientName =
     pkg?.recipientName?.trim() ||
     customLabel?.trim() ||
-    matched?.recipientName ||
+    (isMatchValid ? matched?.recipientName : undefined) ||
     `Titik Lokasi (${dateStr}, ${timeStr})`;
 
   const fullAddress =
     pkg?.fullAddress?.trim() ||
-    matched?.fullAddress ||
+    (isMatchValid ? matched?.fullAddress : undefined) ||
     pkg?.areaOrStreet ||
     `Titik GPS (${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)})`;
 
   const areaOrStreet =
     pkg?.areaOrStreet?.trim() ||
-    matched?.areaOrStreet ||
+    (isMatchValid ? matched?.areaOrStreet : undefined) ||
     'Branta Pamekasan';
 
   const newHousePoint: SavedHousePoint = {
     id: houseId,
     recipientName,
-    recipientPhone: pkg?.recipientPhone?.trim() || matched?.recipientPhone || '',
+    recipientPhone: pkg?.recipientPhone?.trim() || (isMatchValid ? matched?.recipientPhone : '') || '',
     fullAddress,
     areaOrStreet,
-    benchmark: matched?.benchmark || 'Titik dikunci instan di lokasi kurir (1-tap)',
-    photoUrl: matched?.photoUrl,
+    benchmark: (isMatchValid ? matched?.benchmark : undefined) || 'Titik dikunci instan di lokasi kurir (1-tap)',
+    photoUrl: isMatchValid ? matched?.photoUrl : undefined,
     lat: loc.lat,
     lng: loc.lng,
     accuracyMeters: loc.accuracy,
-    notes: matched?.notes || `Dikunci langsung pada ${dateStr} jam ${timeStr} (Akurasi: ±${Math.round(loc.accuracy || 4)}m)`,
-    savedAt: matched?.savedAt || now.toISOString(),
-    deliveryCount: (matched?.deliveryCount || 0) + 1,
+    notes: (isMatchValid ? matched?.notes : undefined) || `Dikunci langsung pada ${dateStr} jam ${timeStr} (Akurasi: ±${Math.round(loc.accuracy || 4)}m)`,
+    savedAt: (isMatchValid ? matched?.savedAt : undefined) || now.toISOString(),
+    deliveryCount: ((isMatchValid ? matched?.deliveryCount : 0) || 0) + 1,
   };
 
   const updatedList = saveHousePoint(newHousePoint);
@@ -444,8 +445,69 @@ export async function quickRecordCurrentGpsPoint(
 }
 
 /**
+ * Memeriksa apakah data titik rumah tersimpan benar-benar milik pelanggan yang sama
+ * (berdasarkan ID paket langsung, kecocokan No HP, atau kesamaan nama penerima)
+ */
+export function isSameCustomer(
+  house: SavedHousePoint,
+  pkg: Partial<DeliveryPackage>
+): boolean {
+  if (!house || !pkg) return false;
+
+  // 1. Cocokkan ID Paket Langsung
+  if (pkg.id && (house.id === `house-pkg-${pkg.id}` || house.id.includes(pkg.id))) {
+    return true;
+  }
+
+  // 2. Cocokkan No HP (minimal 8 digit identik, abaikan sensor *)
+  const pkgPhone = pkg.recipientPhone ? pkg.recipientPhone.replace(/\D/g, '') : '';
+  const hPhone = house.recipientPhone ? house.recipientPhone.replace(/\D/g, '') : '';
+  if (pkgPhone.length >= 8 && hPhone.length >= 8) {
+    if (pkgPhone.endsWith(hPhone.slice(-8)) || hPhone.endsWith(pkgPhone.slice(-8))) {
+      return true;
+    }
+  }
+
+  // 3. Cocokkan Nama Penerima
+  const cleanPkgName = (pkg.recipientName || '')
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .trim();
+
+  const cleanHName = (house.recipientName || '')
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .trim();
+
+  if (cleanPkgName.length >= 3 && cleanHName.length >= 3) {
+    if (cleanHName === cleanPkgName) return true;
+
+    const wordsPkg = cleanPkgName.split(/\s+/).filter((w) => w.length >= 3);
+    const wordsH = cleanHName.split(/\s+/).filter((w) => w.length >= 3);
+
+    // Jika nama terdiri dari 2 kata atau lebih (cth: "Diana Laili"), harus ada kecocokan signifikan
+    if (wordsPkg.length >= 2 && wordsH.length >= 2) {
+      const matchWords = wordsPkg.filter((wp) => wordsH.some((wh) => wh === wp));
+      // Jika memiliki 2 kata yang sama, baru dianggap pelanggan yang sama (menghindari "Diana Laili" vs "Haulatul Laili")
+      if (matchWords.length >= 2) return true;
+      return false;
+    }
+
+    // Jika 1 kata (cth: "Luluk" vs "Luluk"), cocokkan secara persis
+    if (wordsPkg.length === 1 && wordsH.length === 1 && wordsPkg[0] === wordsH[0]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Mencocokkan paket pengantaran dengan database titik rumah tersimpan
- * Cek berdasarkan: Nama mirip, No HP sama, atau jarak koordinat sangat dekat (< 50m)
+ * Cek HANYA berdasarkan: ID paket yang sama, No HP yang cocok, atau Nama pelanggan yang cocok.
+ * PERHATIAN: Jarak GPS saja (< 45m) TIDAK BOLEH mencocokkan tetangga yang berbeda orang!
  */
 export function findMatchingHouse(
   houses: SavedHousePoint[],
@@ -453,36 +515,25 @@ export function findMatchingHouse(
 ): SavedHousePoint | undefined {
   if (!houses || houses.length === 0 || !pkg) return undefined;
 
-  const pkgPhone = pkg.recipientPhone ? pkg.recipientPhone.replace(/\D/g, '') : '';
-  const pkgName = pkg.recipientName ? pkg.recipientName.toLowerCase().trim() : '';
-
-  for (const h of houses) {
-    const hPhone = h.recipientPhone ? h.recipientPhone.replace(/\D/g, '') : '';
-    // 1. Cek No HP cocok (setidaknya 8 digit terakhir sama)
-    if (pkgPhone && hPhone && pkgPhone.length >= 8 && hPhone.length >= 8) {
-      if (pkgPhone.endsWith(hPhone.slice(-8)) || hPhone.endsWith(pkgPhone.slice(-8))) {
-        return h;
-      }
-    }
-
-    // 2. Cek Nama Penerima cocok
-    const hName = h.recipientName ? h.recipientName.toLowerCase().trim() : '';
-    if (pkgName && hName && pkgName.length >= 3 && hName.length >= 3) {
-      if (hName.includes(pkgName) || pkgName.includes(hName)) {
-        return h;
-      }
-    }
-
-    // 3. Cek Jarak GPS sangat dekat (< 45 meter)
-    if (pkg.lat && pkg.lng && h.lat && h.lng) {
-      const dLat = (pkg.lat - h.lat) * 111320;
-      const dLng = (pkg.lng - h.lng) * 111320 * Math.cos((h.lat * Math.PI) / 180);
-      const distMeters = Math.sqrt(dLat * dLat + dLng * dLng);
-      if (distMeters < 45) {
-        return h;
-      }
-    }
+  // 1. Prioritas Utama: ID paket langsung
+  if (pkg.id) {
+    const directId = houses.find((h) => h.id === `house-pkg-${pkg.id}` || h.id.includes(pkg.id!));
+    if (directId) return directId;
   }
+
+  // 2. Prioritas Kedua: No HP cocok (minimal 8 digit)
+  const pkgPhone = pkg.recipientPhone ? pkg.recipientPhone.replace(/\D/g, '') : '';
+  if (pkgPhone.length >= 8) {
+    const phoneMatch = houses.find((h) => {
+      const hPhone = h.recipientPhone ? h.recipientPhone.replace(/\D/g, '') : '';
+      return hPhone.length >= 8 && (pkgPhone.endsWith(hPhone.slice(-8)) || hPhone.endsWith(pkgPhone.slice(-8)));
+    });
+    if (phoneMatch) return phoneMatch;
+  }
+
+  // 3. Prioritas Ketiga: Nama penerima cocok secara ketat
+  const nameMatch = houses.find((h) => isSameCustomer(h, pkg));
+  if (nameMatch) return nameMatch;
 
   return undefined;
 }
@@ -523,24 +574,26 @@ export async function deliverWithHousePhoto(
 
   const currentHouses = getSavedHousePoints();
   const matched = findMatchingHouse(currentHouses, pkg);
+  const isMatchValid = matched && isSameCustomer(matched, pkg);
 
-  const houseId = matched?.id || (pkg.id ? `house-pkg-${pkg.id}` : `house-${Date.now()}`);
+  // Kunci ID: Selalu berikan ID tersendiri untuk paket ini jika bukan penerima yang sama persis
+  const houseId = isMatchValid ? matched.id : `house-pkg-${pkg.id}`;
 
   const houseToSave: SavedHousePoint = {
     id: houseId,
-    recipientName: pkg.recipientName || matched?.recipientName || 'Pelanggan J&T',
-    recipientPhone: pkg.recipientPhone || matched?.recipientPhone || '',
-    fullAddress: pkg.fullAddress || matched?.fullAddress || '',
-    areaOrStreet: pkg.areaOrStreet || matched?.areaOrStreet || 'Branta Pamekasan',
-    benchmark: matched?.benchmark || 'Foto rumah bukti serah terima paket',
-    photoUrl,
+    recipientName: pkg.recipientName || (isMatchValid ? matched.recipientName : 'Pelanggan J&T'),
+    recipientPhone: pkg.recipientPhone || (isMatchValid ? matched.recipientPhone : '') || '',
+    fullAddress: pkg.fullAddress || (isMatchValid ? matched.fullAddress : '') || '',
+    areaOrStreet: pkg.areaOrStreet || (isMatchValid ? matched.areaOrStreet : 'Branta Pamekasan'),
+    benchmark: (isMatchValid && matched.benchmark) ? matched.benchmark : `Rumah ${pkg.recipientName}`,
+    photoUrl, // Foto rumah milik paket ini
     lat,
     lng,
     accuracyMeters: accuracy,
     notes: `Paket ${pkg.trackingNumber} berhasil diantar pada ${dateStr} jam ${timeStr}`,
-    savedAt: matched?.savedAt || now.toISOString(),
+    savedAt: (isMatchValid && matched.savedAt) ? matched.savedAt : now.toISOString(),
     updatedAt: now.toISOString(),
-    deliveryCount: (matched?.deliveryCount || 0) + 1,
+    deliveryCount: ((isMatchValid ? matched.deliveryCount : 0) || 0) + 1,
   };
 
   const updatedHouses = saveHousePoint(houseToSave);

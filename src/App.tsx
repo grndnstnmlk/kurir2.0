@@ -32,6 +32,7 @@ import {
   fetchHousesFromSupabase,
   deliverWithHousePhoto,
   findMatchingHouse,
+  isSameCustomer,
 } from './utils/houseManager';
 import {
   getLocalLicense,
@@ -141,8 +142,9 @@ export function App() {
           let hasChange = false;
           const updated = prev.map((p) => {
             const match = findMatchingHouse(res.houses!, p);
-            if (match) {
-              if (p.lat !== match.lat || p.lng !== match.lng) {
+            if (match && isSameCustomer(match, p)) {
+              const photo = match.photoUrl || p.proofPhotoUrl;
+              if (p.lat !== match.lat || p.lng !== match.lng || p.proofPhotoUrl !== photo) {
                 hasChange = true;
                 return {
                   ...p,
@@ -150,6 +152,7 @@ export function App() {
                   lng: match.lng,
                   areaOrStreet: match.areaOrStreet || p.areaOrStreet,
                   benchmark: match.benchmark || p.benchmark,
+                  proofPhotoUrl: photo,
                 };
               }
             }
@@ -203,8 +206,9 @@ export function App() {
             let hasChange = false;
             const updated = prev.map((p) => {
               const match = findMatchingHouse(res.houses!, p);
-              if (match) {
-                if (p.lat !== match.lat || p.lng !== match.lng) {
+              if (match && isSameCustomer(match, p)) {
+                const photo = match.photoUrl || p.proofPhotoUrl;
+                if (p.lat !== match.lat || p.lng !== match.lng || p.proofPhotoUrl !== photo) {
                   hasChange = true;
                   return {
                     ...p,
@@ -212,6 +216,7 @@ export function App() {
                     lng: match.lng,
                     areaOrStreet: match.areaOrStreet || p.areaOrStreet,
                     benchmark: match.benchmark || p.benchmark,
+                    proofPhotoUrl: photo,
                   };
                 }
               }
@@ -452,8 +457,9 @@ export function App() {
         let hasChange = false;
         const updated = prev.map((p) => {
           const match = findMatchingHouse(res.houses!, p);
-          if (match) {
-            if (p.lat !== match.lat || p.lng !== match.lng) {
+          if (match && isSameCustomer(match, p)) {
+            const photo = match.photoUrl || p.proofPhotoUrl;
+            if (p.lat !== match.lat || p.lng !== match.lng || p.proofPhotoUrl !== photo) {
               hasChange = true;
               return {
                 ...p,
@@ -461,6 +467,7 @@ export function App() {
                 lng: match.lng,
                 areaOrStreet: match.areaOrStreet || p.areaOrStreet,
                 benchmark: match.benchmark || p.benchmark,
+                proofPhotoUrl: photo,
               };
             }
           }
@@ -541,6 +548,7 @@ export function App() {
               lng: savedHouse.lng,
               areaOrStreet: savedHouse.areaOrStreet || p.areaOrStreet,
               benchmark: savedHouse.benchmark || p.benchmark,
+              proofPhotoUrl: savedHouse.photoUrl || p.proofPhotoUrl,
             };
           }
           return p;

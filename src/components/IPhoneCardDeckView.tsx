@@ -35,7 +35,7 @@ import {
   formatRupiah,
   generateJntDeliveryMessage,
 } from '../utils/routeOptimizer';
-import { findMatchingHouse } from '../utils/houseManager';
+import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
 
 interface IPhoneCardDeckViewProps {
   packages: DeliveryPackage[];
@@ -81,6 +81,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [searchFilter, setSearchFilter] = useState<'all' | 'pending' | 'cod' | 'delivered' | 'returned'>('all');
   const searchInputRef = React.useRef<HTMLInputElement | null>(null);
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
+  const photoTargetPkgRef = React.useRef<DeliveryPackage | null>(null);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -91,6 +92,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   }, [isSearchOpen]);
 
   const handleTriggerCamera = () => {
+    if (!currentPkg) return;
+    photoTargetPkgRef.current = currentPkg;
     if (cameraInputRef.current) {
       cameraInputRef.current.value = '';
       cameraInputRef.current.click();
@@ -99,24 +102,28 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   const handleCameraPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !currentPkg || !onDeliverWithPhoto) return;
+    const targetPkg = photoTargetPkgRef.current || currentPkg;
+    if (!file || !targetPkg || !onDeliverWithPhoto) return;
 
     setIsDeliveringWithPhoto(true);
     setPinToast(null);
 
-    const res = await onDeliverWithPhoto(currentPkg, file);
+    const res = await onDeliverWithPhoto(targetPkg, file);
     setIsDeliveringWithPhoto(false);
 
     if (res.success) {
       setPinToast({
         type: 'success',
-        text: `🎉 Foto rumah tersimpan & Paket #${currentPkg.orderIndex} Selesai Terkirim!`,
+        text: `🎉 Foto rumah tersimpan & Paket #${targetPkg.orderIndex} Selesai Terkirim!`,
       });
-      // Otomatis geser ke kartu paket antaran berikutnya setelah 1.2 detik
+      // Jika filterPendingOnly aktif, targetPkg otomatis keluar dari displayPackages
+      // sehingga kartu paket berikutnya otomatis bergeser ke safeIndex saat ini.
+      // Hanya geser index (+1) jika filterPendingOnly TIDAK aktif.
       setTimeout(() => {
-        if (safeIndex < packages.length - 1) {
+        if (!filterPendingOnly && safeIndex < packages.length - 1) {
           setCurrentIndex(safeIndex + 1);
         }
+        setPinToast(null);
       }, 1200);
     } else {
       setPinToast({
@@ -205,6 +212,11 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const prevPkg = safeIndex > 0 ? displayPackages[safeIndex - 1] : null;
   const legInfo = getStopLegInfo(currentPkg, prevPkg, dropPointLat, dropPointLng);
   const matchingHouse = currentPkg ? findMatchingHouse(savedHouses, currentPkg) : undefined;
+  const currentPhotoUrl =
+    currentPkg?.proofPhotoUrl ||
+    (matchingHouse?.photoUrl && isSameCustomer(matchingHouse, currentPkg)
+      ? matchingHouse.photoUrl
+      : undefined);
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -273,9 +285,9 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
       text: `✅ Paket #${pkg.orderIndex} (${pkg.recipientName}) Selesai Terkirim!`,
     });
 
-    // Otomatis geser ke antaran berikutnya secara mulus setelah 700ms
+    // Otomatis geser ke antaran berikutnya secara mulus setelah 700ms (hanya jika mode fokus sisa tidak aktif)
     setTimeout(() => {
-      if (safeIndex < displayPackages.length - 1) {
+      if (!filterPendingOnly && safeIndex < displayPackages.length - 1) {
         setCurrentIndex(safeIndex + 1);
       }
       setPinToast(null);
@@ -312,9 +324,9 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
         text: `📦 Paket #${pkg.orderIndex} (${pkg.recipientName}) ditandai DIRETUR ke Drop Point!`,
       });
 
-      // Otomatis geser ke kartu paket antaran berikutnya setelah 700ms
+      // Otomatis geser ke kartu paket antaran berikutnya setelah 700ms (hanya jika mode fokus sisa tidak aktif)
       setTimeout(() => {
-        if (safeIndex < displayPackages.length - 1) {
+        if (!filterPendingOnly && safeIndex < displayPackages.length - 1) {
           setCurrentIndex(safeIndex + 1);
         }
         setPinToast(null);
@@ -593,14 +605,14 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             <div className="my-3 py-2 flex flex-col items-center text-center justify-center relative">
               {/* Illustrated Delivery Parcel Box Representation / Real House Photo */}
               <div className="relative mb-2">
-                {matchingHouse?.photoUrl ? (
+                {currentPhotoUrl ? (
                   <div
                     onClick={() => onSaveHousePoint && onSaveHousePoint(currentPkg)}
                     className="w-24 h-24 rounded-3xl border-2 border-amber-400 flex flex-col items-center justify-center shadow-md relative overflow-hidden group cursor-pointer"
                     title="Titik rumah tersimpan! Klik untuk lihat foto & patokan"
                   >
                     <img
-                      src={matchingHouse.photoUrl}
+                      src={currentPhotoUrl}
                       alt="Foto Rumah"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
@@ -895,7 +907,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
               </button>
             )}
 
-            {matchingHouse?.photoUrl ? (
+            {currentPhotoUrl ? (
               <button
                 type="button"
                 onClick={() => onSaveHousePoint && onSaveHousePoint(currentPkg)}
