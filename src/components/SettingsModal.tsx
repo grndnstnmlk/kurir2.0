@@ -271,13 +271,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div>
             <label className="block text-[#696969] mb-1 font-medium">Template Pesan Pengantaran (WhatsApp & SMS):</label>
             <textarea
-              rows={4}
+              rows={5}
               value={customWhatsAppTemplate}
               onChange={(e) => setCustomWhatsAppTemplate(e.target.value)}
               className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-[16px] p-3 text-[#080808] font-mono text-xs focus:outline-none focus:border-[#292929]"
             />
             <span className="text-[10px] text-[#696969] mt-1 block leading-relaxed">
-              Format Standar J&T Express. Variabel otomatis: <code className="font-bold">{'{NAMA}'}</code>, <code className="font-bold">{'{RESI}'}</code>, <code className="font-bold">{'{ALAMAT}'}</code>, <code className="font-bold">{'{TIPE_PAKET}'}</code>, <code className="font-bold">{'{KONFIRMASI_COD}'}</code>, <code className="font-bold">{'{TOTAL_COD}'}</code>.
+              Format Resmi J&T Sprinter. Variabel otomatis: <code className="font-bold">{'{NAMA}'}</code>, <code className="font-bold">{'{RESI}'}</code>, <code className="font-bold">{'{ALAMAT}'}</code>, <code className="font-bold">{'{TIPE_PAKET}'}</code>, <code className="font-bold">{'{INFO_TOTAL}'}</code>.
             </span>
           </div>
 

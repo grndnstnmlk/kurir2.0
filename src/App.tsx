@@ -248,7 +248,11 @@ export function App() {
           if (!parsed.adminWhatsAppNumber || parsed.adminWhatsAppNumber.includes('1234567890')) {
             parsed.adminWhatsAppNumber = '6281295713923';
           }
-          if (!parsed.customWhatsAppTemplate || parsed.customWhatsAppTemplate.includes('mau mengantar paket')) {
+          if (
+            !parsed.customWhatsAppTemplate ||
+            parsed.customWhatsAppTemplate.includes('mau mengantar paket') ||
+            parsed.customWhatsAppTemplate.includes('akan melakukan proses delivery')
+          ) {
             parsed.customWhatsAppTemplate = DEFAULT_SETTINGS.customWhatsAppTemplate;
           }
           return parsed;

@@ -86,49 +86,67 @@ export function formatCodWhatsAppInfo(
 }
 
 /**
- * Format Pesan Notifikasi Delivery Resmi J&T Express (Sesuai Standar Chat Sprinter):
- * 
- * Contoh COD:
- * "Halo Hana, kami dari J&T Express akan melakukan proses delivery paket COD dengan nomor waybill JY2332337682 ke alamat anda di Terrak konter jaya cell TLANAKAN PAMEKASAN JAWA TIMUR , mohon kesediaannya untuk memastikan apakah anda benar memesan barang COD senilai Rp 50.000?
- * Terima kasih"
+ * Format Pesan Notifikasi Delivery Resmi J&T Express (Sesuai Standar Chat Sprinter Asli):
  *
- * Contoh Non-COD:
- * "Halo Hana, kami dari J&T Express akan melakukan proses delivery paket dengan nomor waybill JY2332337682 ke alamat anda di Terrak konter jaya cell TLANAKAN PAMEKASAN JAWA TIMUR , mohon kesediaannya untuk memastikan apakah anda berada di tempat?
+ * Contoh COD:
+ * "Halo Kak【Diana Laili】,
+ * Saya dari J&T Express, Mau konfirmasi paket COD dengan nomor resi【JY2379468922】ke alamat:
+ * 【Dermaga branta pesisir  desa branta pesisir,kecamatan tlanakan kabupaten pamekasan TLANAKAN PAMEKASAN JAWA TIMUR】
+ *
+ * Totalnya Rp【230,218】
+ * Mohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?
+ *
  * Terima kasih"
  */
 export function generateJntDeliveryMessage(
   pkg: DeliveryPackage,
   customTemplate?: string
 ): string {
-  const recipient = pkg.recipientName ? pkg.recipientName.trim() : 'Kak';
-  const calc = calculateCodWithCourierFee(pkg.codAmount || 0);
-  const codPrice = calc.formattedTotal || formatRupiah(pkg.codAmount || 0);
+  const rawRecipient = pkg.recipientName ? pkg.recipientName.trim() : 'Kak';
+  const cleanRecipient = rawRecipient.replace(/^kak\s+/i, '').trim() || 'Kak';
 
-  // Jika customTemplate belum disetel atau menggunakan template lama 'mau mengantar paket',
-  // gunakan format resmi J&T Express persis seperti tangkapan layar lapangan
-  if (!customTemplate || customTemplate.includes('mau mengantar paket')) {
-    if (pkg.isCod && pkg.codAmount > 0) {
-      return `Halo ${recipient}, kami dari J&T Express akan melakukan proses delivery paket COD dengan nomor waybill ${pkg.trackingNumber} ke alamat anda di ${pkg.fullAddress} , mohon kesediaannya untuk memastikan apakah anda benar memesan barang COD senilai ${codPrice}?\nTerima kasih`;
-    } else {
-      return `Halo ${recipient}, kami dari J&T Express akan melakukan proses delivery paket dengan nomor waybill ${pkg.trackingNumber} ke alamat anda di ${pkg.fullAddress} , mohon kesediaannya untuk memastikan apakah anda berada di tempat?\nTerima kasih`;
-    }
-  }
+  const rawCod = pkg.codAmount || 0;
+  const formattedCodNumber = new Intl.NumberFormat('en-US').format(rawCod);
 
-  // Jika menggunakan customTemplate dari SettingsModal
-  const codType = pkg.isCod ? 'COD ' : '';
-  const codConfirm = pkg.isCod
-    ? `mohon kesediaannya untuk memastikan apakah anda benar memesan barang COD senilai ${codPrice}?`
-    : 'mohon kesediaannya untuk memastikan apakah anda berada di tempat?';
+  const isCodPkg = Boolean(pkg.isCod && rawCod > 0);
+  const tipePaket = isCodPkg ? 'COD ' : '';
+  const infoTotal = isCodPkg
+    ? `Totalnya Rp【${formattedCodNumber}】`
+    : 'Paket Non-COD (Sudah Lunas)';
 
-  return customTemplate
-    .replace(/{NAMA}/g, recipient)
+  // Format Standar Resmi J&T Sprinter
+  const defaultJntTemplate = `Halo Kak【{NAMA}】,
+Saya dari J&T Express, Mau konfirmasi paket {TIPE_PAKET}dengan nomor resi【{RESI}】ke alamat:
+【{ALAMAT}】
+
+{INFO_TOTAL}
+Mohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?
+
+Terima kasih`;
+
+  const templateToUse =
+    !customTemplate ||
+    customTemplate.includes('mau mengantar paket') ||
+    customTemplate.includes('akan melakukan proses delivery')
+      ? defaultJntTemplate
+      : customTemplate;
+
+  return templateToUse
+    .replace(/{NAMA}/g, cleanRecipient)
     .replace(/{RESI}/g, pkg.trackingNumber)
     .replace(/{WAYBILL}/g, pkg.trackingNumber)
     .replace(/{ALAMAT}/g, pkg.fullAddress)
-    .replace(/{TIPE_PAKET}/g, codType)
-    .replace(/{KONFIRMASI_COD}/g, codConfirm)
-    .replace(/{TOTAL_COD}/g, codPrice)
-    .replace(/{INFO_COD}/g, pkg.isCod ? `senilai ${codPrice}` : 'Non-COD');
+    .replace(/{TIPE_PAKET}/g, tipePaket)
+    .replace(/{INFO_TOTAL}/g, infoTotal)
+    .replace(/{TOTAL_COD}/g, formattedCodNumber)
+    .replace(/{NOMINAL_COD}/g, formattedCodNumber)
+    .replace(
+      /{KONFIRMASI_COD}/g,
+      isCodPkg
+        ? `Totalnya Rp【${formattedCodNumber}】\nMohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?`
+        : 'Mohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?'
+    )
+    .replace(/{INFO_COD}/g, isCodPkg ? `Totalnya Rp【${formattedCodNumber}】` : 'Paket Non-COD (Sudah Lunas)');
 }
 
 /**
