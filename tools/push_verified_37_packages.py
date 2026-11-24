@@ -1,0 +1,629 @@
+import json
+import urllib.request
+import datetime
+
+# Complete 37 Packages for 23 November 2026 (Branta Pesisir, Tlanakan, Pamekasan)
+# 31 stops, 37 total packages matching the exact 37 packages in J&T Sprinter app
+packages_37 = [
+    # ----------------------------------------------------
+    # ZONE 1: Jl. Raya Branta & Masuk Branta Utara (3 stops / 3 packages)
+    # ----------------------------------------------------
+    {
+        "id": "pkg-20261123-01",
+        "trackingNumber": "JX2311230101",
+        "recipientName": "FIAZUBAIDI",
+        "recipientPhone": "08******4436",
+        "fullAddress": "Bandaran, Branta Pesisir, Kec. Tlanakan, Kabupaten Pamekasan, Jawa Timur ,Indonesia Samping Musholla Langger Jeteh TLANAKAN",
+        "areaOrStreet": "Jl. Raya Branta & Masuk Branta Utara",
+        "benchmark": "Samping Musholla Langger Jeteh",
+        "isCod": False,
+        "codAmount": 0,
+        "status": "pending",
+        "lat": -7.2165,
+        "lng": 113.4502,
+        "createdAt": "2026-11-23T08:31:46.000Z"
+    },
+    {
+        "id": "pkg-20261123-02",
+        "trackingNumber": "JX2311230102",
+        "recipientName": "Najwan damar",
+        "recipientPhone": "08******1797",
+        "fullAddress": "Branta Pesisir, Jalan Raya Branta masjid alfalah Branta pesisir TLANAKAN",
+        "areaOrStreet": "Jl. Raya Branta & Masuk Branta Utara",
+        "benchmark": "Masjid Al-Falah Branta Pesisir",
+        "isCod": True,
+        "codAmount": 55000,
+        "status": "pending",
+        "lat": -7.2172,
+        "lng": 113.4505,
+        "createdAt": "2026-11-23T08:31:31.000Z"
+    },
+    {
+        "id": "pkg-20261123-03",
+        "trackingNumber": "JX2311230103",
+        "recipientName": "Anis Ruslan",
+        "recipientPhone": "08******0075",
+        "fullAddress": "jalan raya branta pesisir rw1 rt1 perempatan ke timur pom mini TLANAKAN",
+        "areaOrStreet": "Jl. Raya Branta & Masuk Branta Utara",
+        "benchmark": "Perempatan ke timur Pom Mini, RW 1 RT 1",
+        "isCod": True,
+        "codAmount": 38000,
+        "status": "pending",
+        "lat": -7.2175,
+        "lng": 113.4508,
+        "createdAt": "2026-11-23T08:29:51.000Z"
+    },
+
+    # ----------------------------------------------------
+    # ZONE 2: Dusun Gilin & Sekitar Masjid Al-Furqon (3 stops / 4 packages)
+    # ----------------------------------------------------
+    {
+        "id": "pkg-20261123-04",
+        "trackingNumber": "JX2311230201",
+        "recipientName": "orang madhura (Paket 1/2)",
+        "recipientPhone": "08******5614",
+        "fullAddress": "jln branta pesisir dusun gilin,gang pertama dari pertelon TLANAKAN",
+        "areaOrStreet": "Dusun Gilin - Sekitar Masjid Al-Furqon",
+        "benchmark": "Dusun Gilin gang pertama dari pertelon",
+        "isCod": True,
+        "codAmount": 42000,
+        "status": "pending",
+        "lat": -7.21825,
+        "lng": 113.4497,
+        "createdAt": "2026-11-23T08:24:22.000Z"
+    },
+    {
+        "id": "pkg-20261123-05",
+        "trackingNumber": "JX2311230202",
+        "recipientName": "orang madhura (Paket 2/2)",
+        "recipientPhone": "08******5614",
+        "fullAddress": "jln branta pesisir dusun gilin,gang pertama dari pertelon TLANAKAN",
+        "areaOrStreet": "Dusun Gilin - Sekitar Masjid Al-Furqon",
+        "benchmark": "Dusun Gilin gang pertama dari pertelon",
+        "isCod": True,
+        "codAmount": 35000,
+        "status": "pending",
+        "lat": -7.21825,
+        "lng": 113.4497,
+        "createdAt": "2026-11-23T08:24:22.000Z"
+    },
+    {
+        "id": "pkg-20261123-06",
+        "trackingNumber": "JX2311230203",
+        "recipientName": "Erna Megawati",
+        "recipientPhone": "08******4475",
+        "fullAddress": "Desa Branta Pesisir, dusun gilin gag pertama pagar putih TLANAKAN",
+        "areaOrStreet": "Dusun Gilin - Sekitar Masjid Al-Furqon",
+        "benchmark": "Dusun Gilin gang pertama, pagar putih",
+        "isCod": True,
+        "codAmount": 50000,
+        "status": "pending",
+        "lat": -7.2183,
+        "lng": 113.44965,
+        "createdAt": "2026-11-23T08:23:39.000Z"
+    },
+    {
+        "id": "pkg-20261123-07",
+        "trackingNumber": "JX2311230204",
+        "recipientName": "yuyud",
+        "recipientPhone": "08******8940",
+        "fullAddress": "Masjid Al-Furqon Branta Pesisir, QFJ2+72X, Bandaran, Branta Pesisir gg pertama ke barat TLANAKAN",
+        "areaOrStreet": "Dusun Gilin - Sekitar Masjid Al-Furqon",
+        "benchmark": "Masjid Al-Furqon, gang pertama ke barat",
+        "isCod": True,
+        "codAmount": 62000,
+        "status": "pending",
+        "lat": -7.2187,
+        "lng": 113.44895,
+        "createdAt": "2026-11-23T08:27:48.000Z"
+    },
+
+    # ----------------------------------------------------
+    # ZONE 3: Dusun Tinjang & Bandaran (4 stops / 5 packages)
+    # ----------------------------------------------------
+    {
+        "id": "pkg-20261123-08",
+        "trackingNumber": "JX2311230301",
+        "recipientName": "ria firda (Paket 1/2)",
+        "recipientPhone": "08******9648",
+        "fullAddress": "Branta Pesisir, Dusun Bandaran Rt11, Rw6, Branta Pesisir masjid al amin ke timur mentok TLANAKAN",
+        "areaOrStreet": "Dusun Tinjang & Bandaran",
+        "benchmark": "Masjid Al-Amin ke timur mentok, RT 11 RW 6",
+        "isCod": True,
+        "codAmount": 75000,
+        "status": "pending",
+        "lat": -7.2205,
+        "lng": 113.4518,
+        "createdAt": "2026-11-23T08:31:05.000Z"
+    },
+    {
+        "id": "pkg-20261123-09",
+        "trackingNumber": "JX2311230302",
+        "recipientName": "ria firda (Paket 2/2)",
+        "recipientPhone": "08******9648",
+        "fullAddress": "Branta Pesisir, Dusun Bandaran Rt11, Rw6, Branta Pesisir masjid al amin ke timur mentok TLANAKAN",
+        "areaOrStreet": "Dusun Tinjang & Bandaran",
+        "benchmark": "Masjid Al-Amin ke timur mentok, RT 11 RW 6",
+        "isCod": True,
+        "codAmount": 48000,
+        "status": "pending",
+        "lat": -7.2205,
+        "lng": 113.4518,
+        "createdAt": "2026-11-23T08:31:05.000Z"
+    },
+    {
+        "id": "pkg-20261123-10",
+        "trackingNumber": "JX2311230303",
+        "recipientName": "Diassssss bujang branta",
+        "recipientPhone": "08******9293",
+        "fullAddress": "Branta Pesisir, Dusun Bandaran Rt11, Rw6, Branta Pesisir gank rumah hj jumalli TLANAKAN",
+        "areaOrStreet": "Dusun Tinjang & Bandaran",
+        "benchmark": "Gang rumah Hj Jumalli, RT 11 RW 6",
+        "isCod": True,
+        "codAmount": 58000,
+        "status": "pending",
+        "lat": -7.2204,
+        "lng": 113.4514,
+        "createdAt": "2026-11-23T08:30:57.000Z"
+    },
+    {
+        "id": "pkg-20261123-11",
+        "trackingNumber": "JX2311230304",
+        "recipientName": "Gisel Rania",
+        "recipientPhone": "08******3221",
+        "fullAddress": "Bandaran, Branta Pesisir, Kec. Tlanakan, Kabupaten Pamekasan, Jawa Timur ,Indonesia d depan toko besi hj sinol,rujak kelang ratna TLANAKAN",
+        "areaOrStreet": "Dusun Tinjang & Bandaran",
+        "benchmark": "Depan toko besi Hj Sinol, Rujak Kelang Ratna",
+        "isCod": True,
+        "codAmount": 65000,
+        "status": "pending",
+        "lat": -7.2208,
+        "lng": 113.4509,
+        "createdAt": "2026-11-23T08:30:13.000Z"
+    },
+    {
+        "id": "pkg-20261123-12",
+        "trackingNumber": "JX2311230305",
+        "recipientName": "Neni triana fitri",
+        "recipientPhone": "08******5979",
+        "fullAddress": "jln.pelabuhan dsn.bandaran ( bengkel las rusak) TLANAKAN",
+        "areaOrStreet": "Dusun Tinjang & Bandaran",
+        "benchmark": "Jalan Pelabuhan Dusun Bandaran, dekat bengkel las rusak",
+        "isCod": True,
+        "codAmount": 40000,
+        "status": "pending",
+        "lat": -7.2212,
+        "lng": 113.4501,
+        "createdAt": "2026-11-23T08:29:11.000Z"
+    },
+
+    # ----------------------------------------------------
+    # ZONE 4: Dusun Lunas & Balai Desa (13 stops / 17 packages)
+    # ----------------------------------------------------
+    {
+        "id": "pkg-20261123-13",
+        "trackingNumber": "JX2311230401",
+        "recipientName": "Sasa Saleh (Paket 1/3)",
+        "recipientPhone": "08******6762",
+        "fullAddress": "jln. pelabuhan, dsn.lunas, Branta pesisir, tlanakan, Pamekasan TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Jalan Pelabuhan Dusun Lunas",
+        "isCod": True,
+        "codAmount": 46000,
+        "status": "pending",
+        "lat": -7.2210,
+        "lng": 113.4506,
+        "createdAt": "2026-11-23T08:31:54.000Z"
+    },
+    {
+        "id": "pkg-20261123-14",
+        "trackingNumber": "JX2311230402",
+        "recipientName": "Sasa Saleh (Paket 2/3)",
+        "recipientPhone": "08******6762",
+        "fullAddress": "jln. pelabuhan, dsn.lunas, Branta pesisir, tlanakan, Pamekasan TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Jalan Pelabuhan Dusun Lunas",
+        "isCod": True,
+        "codAmount": 38000,
+        "status": "pending",
+        "lat": -7.2210,
+        "lng": 113.4506,
+        "createdAt": "2026-11-23T08:31:54.000Z"
+    },
+    {
+        "id": "pkg-20261123-15",
+        "trackingNumber": "JX2311230403",
+        "recipientName": "Sasa Saleh (Paket 3/3)",
+        "recipientPhone": "08******6762",
+        "fullAddress": "jln. pelabuhan, dsn.lunas, Branta pesisir, tlanakan, Pamekasan TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Jalan Pelabuhan Dusun Lunas",
+        "isCod": True,
+        "codAmount": 54000,
+        "status": "pending",
+        "lat": -7.2210,
+        "lng": 113.4506,
+        "createdAt": "2026-11-23T08:31:54.000Z"
+    },
+    {
+        "id": "pkg-20261123-16",
+        "trackingNumber": "JX2311230404",
+        "recipientName": "nur sugik",
+        "recipientPhone": "08******2591",
+        "fullAddress": "Pulau Madura jln pelabuhan BRANTA pasisir,dsn lunas,Bowo cell mentok belok kanan dikit TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Bowo Cell mentok belok kanan dikit",
+        "isCod": True,
+        "codAmount": 52000,
+        "status": "pending",
+        "lat": -7.2206,
+        "lng": 113.4511,
+        "createdAt": "2026-11-23T08:31:19.000Z"
+    },
+    {
+        "id": "pkg-20261123-17",
+        "trackingNumber": "JX2311230405",
+        "recipientName": "agnes mei amanda",
+        "recipientPhone": "08******4090",
+        "fullAddress": "Pamekasan, branta pesisir,dusun lunas, depan konter Bowo Cell branta, depan konter Bowo Cell,cat hijau,lantai putih TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Depan konter Bowo Cell, cat hijau, lantai putih",
+        "isCod": True,
+        "codAmount": 38000,
+        "status": "pending",
+        "lat": -7.2207,
+        "lng": 113.4512,
+        "createdAt": "2026-11-23T08:30:08.000Z"
+    },
+    {
+        "id": "pkg-20261123-18",
+        "trackingNumber": "JX2311230406",
+        "recipientName": "Nanik Khosyiah",
+        "recipientPhone": "08******8363",
+        "fullAddress": "Balai Desa Branta Pesisir, Jalan Nelayan toko 24 jam sebelah bengkel TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Jalan Nelayan toko 24 jam sebelah bengkel, dekat Balai Desa",
+        "isCod": True,
+        "codAmount": 60000,
+        "status": "pending",
+        "lat": -7.2216,
+        "lng": 113.4505,
+        "createdAt": "2026-11-23T08:31:11.000Z"
+    },
+    {
+        "id": "pkg-20261123-19",
+        "trackingNumber": "JX2311230407",
+        "recipientName": "Agustin nur ziyadatur rahmah (Paket 1/2)",
+        "recipientPhone": "08******6531",
+        "fullAddress": "Branta pesisir balai desa branta pesisir TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Balai Desa Branta Pesisir",
+        "isCod": True,
+        "codAmount": 45000,
+        "status": "pending",
+        "lat": -7.2215,
+        "lng": 113.4506,
+        "createdAt": "2026-11-23T08:30:03.000Z"
+    },
+    {
+        "id": "pkg-20261123-20",
+        "trackingNumber": "JX2311230408",
+        "recipientName": "Agustin nur ziyadatur rahmah (Paket 2/2)",
+        "recipientPhone": "08******6531",
+        "fullAddress": "Branta pesisir balai desa branta pesisir TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Balai Desa Branta Pesisir",
+        "isCod": True,
+        "codAmount": 55000,
+        "status": "pending",
+        "lat": -7.2215,
+        "lng": 113.4506,
+        "createdAt": "2026-11-23T08:30:03.000Z"
+    },
+    {
+        "id": "pkg-20261123-21",
+        "trackingNumber": "JX2311230409",
+        "recipientName": "feraaa (Paket 1/2)",
+        "recipientPhone": "08******0342",
+        "fullAddress": "branta pesisir, kecamatan telanakan, kabupaten pamekasan, dusun lunas dibelakang balai desa TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Dusun Lunas di belakang Balai Desa",
+        "isCod": True,
+        "codAmount": 65000,
+        "status": "pending",
+        "lat": -7.2218,
+        "lng": 113.4504,
+        "createdAt": "2026-11-23T08:30:48.000Z"
+    },
+    {
+        "id": "pkg-20261123-22",
+        "trackingNumber": "JX2311230410",
+        "recipientName": "feraaa (Paket 2/2)",
+        "recipientPhone": "08******0342",
+        "fullAddress": "branta pesisir, kecamatan telanakan, kabupaten pamekasan, dusun lunas dibelakang balai desa TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Dusun Lunas di belakang Balai Desa",
+        "isCod": True,
+        "codAmount": 35000,
+        "status": "pending",
+        "lat": -7.2218,
+        "lng": 113.4504,
+        "createdAt": "2026-11-23T08:30:48.000Z"
+    },
+    {
+        "id": "pkg-20261123-23",
+        "trackingNumber": "JX2311230411",
+        "recipientName": "saumaidah",
+        "recipientPhone": "08******9469",
+        "fullAddress": "dusun lunas,masuk ke gang besar TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Dusun Lunas, masuk ke gang besar",
+        "isCod": True,
+        "codAmount": 42000,
+        "status": "pending",
+        "lat": -7.2212,
+        "lng": 113.4502,
+        "createdAt": "2026-11-23T08:30:43.000Z"
+    },
+    {
+        "id": "pkg-20261123-24",
+        "trackingNumber": "JX2311230412",
+        "recipientName": "Fitriya",
+        "recipientPhone": "08******2750",
+        "fullAddress": "balai desa Branta pasisir ke kiri gang lunas pertigaan gang kecil rumah ngadep utara TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Balai Desa ke kiri gang lunas, pertigaan gang kecil rumah hadap utara",
+        "isCod": True,
+        "codAmount": 48000,
+        "status": "pending",
+        "lat": -7.2217,
+        "lng": 113.4503,
+        "createdAt": "2026-11-23T08:30:17.000Z"
+    },
+    {
+        "id": "pkg-20261123-25",
+        "trackingNumber": "JX2311230413",
+        "recipientName": "ledi fatika",
+        "recipientPhone": "08******3944",
+        "fullAddress": "Branta pasisir (jalan pelabuhan dusun lunas gang anggrek belakang balai desa ) TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Jalan Pelabuhan Dusun Lunas Gang Anggrek belakang Balai Desa",
+        "isCod": True,
+        "codAmount": 52000,
+        "status": "pending",
+        "lat": -7.2219,
+        "lng": 113.4501,
+        "createdAt": "2026-11-23T08:29:58.000Z"
+    },
+    {
+        "id": "pkg-20261123-26",
+        "trackingNumber": "JX2311230414",
+        "recipientName": "Nanda Salsabila",
+        "recipientPhone": "08******8031",
+        "fullAddress": "Jl. Pelabuhan Branta pesisir Gg. Angrek Dusun Lunas RT RW 001 001, ke timur Balai TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Jl. Pelabuhan Gg. Anggrek Dusun Lunas ke timur Balai, RT 1 RW 1",
+        "isCod": True,
+        "codAmount": 39000,
+        "status": "pending",
+        "lat": -7.2220,
+        "lng": 113.4503,
+        "createdAt": "2026-11-23T08:29:34.000Z"
+    },
+    {
+        "id": "pkg-20261123-27",
+        "trackingNumber": "JX2311230415",
+        "recipientName": "cintami",
+        "recipientPhone": "08******1173",
+        "fullAddress": "dusun lunas rt 02 rw 01 Branta pesisir Tlanakan Pamekasan TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Dusun Lunas RT 02 RW 01",
+        "isCod": True,
+        "codAmount": 47000,
+        "status": "pending",
+        "lat": -7.2214,
+        "lng": 113.4501,
+        "createdAt": "2026-11-23T08:29:22.000Z"
+    },
+    {
+        "id": "pkg-20261123-28",
+        "trackingNumber": "JX2311230416",
+        "recipientName": "semsem sono",
+        "recipientPhone": "08******7494",
+        "fullAddress": "jalan pelabuhan branta, dusun lunas branta pasisir gang anggrek belakang rujak kelang bak kur  jalan pelabuhan branta pasisir TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Gang Anggrek belakang Rujak Kelang Bak Kur",
+        "isCod": True,
+        "codAmount": 58000,
+        "status": "pending",
+        "lat": -7.2222,
+        "lng": 113.4499,
+        "createdAt": "2026-11-23T08:29:06.000Z"
+    },
+    {
+        "id": "pkg-20261123-29",
+        "trackingNumber": "JX2311230417",
+        "recipientName": "Desi zafran",
+        "recipientPhone": "08******6266",
+        "fullAddress": "gag ke timur Balai Desa branta pesisir Dusun Lunas Depan rumah Bu.titik Bidan TLANAKAN",
+        "areaOrStreet": "Dusun Lunas & Balai Desa",
+        "benchmark": "Gg. ke timur Balai Desa Dusun Lunas, Depan rumah Bu Titik Bidan",
+        "isCod": True,
+        "codAmount": 43000,
+        "status": "pending",
+        "lat": -7.221528,
+        "lng": 113.450718,
+        "createdAt": "2026-11-23T08:25:32.000Z"
+    },
+
+    # ----------------------------------------------------
+    # ZONE 5: Pelabuhan & Dermaga Branta (8 stops / 8 packages)
+    # ----------------------------------------------------
+    {
+        "id": "pkg-20261123-30",
+        "trackingNumber": "JX2311230501",
+        "recipientName": "Holif holif",
+        "recipientPhone": "08******7823",
+        "fullAddress": "Warung Pojok Rujak Kelang Bak Bibah, Jalan Pelabuhan NO.15 pelabuhan TPI Branta psisir TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Warung Pojok Rujak Kelang Bak Bibah, Jl Pelabuhan No 15 TPI",
+        "isCod": True,
+        "codAmount": 32000,
+        "status": "pending",
+        "lat": -7.2255,
+        "lng": 113.4492,
+        "createdAt": "2026-11-23T08:30:52.000Z"
+    },
+    {
+        "id": "pkg-20261123-31",
+        "trackingNumber": "JX2311230502",
+        "recipientName": "ghazali",
+        "recipientPhone": "08******1755",
+        "fullAddress": "rujak lek bibeh,dusun lunas, RT1/RW1,Branta pasisir TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Rujak Lek Bibeh, RT 1 RW 1",
+        "isCod": True,
+        "codAmount": 45000,
+        "status": "pending",
+        "lat": -7.2254,
+        "lng": 113.4491,
+        "createdAt": "2026-11-23T08:29:31.000Z"
+    },
+    {
+        "id": "pkg-20261123-32",
+        "trackingNumber": "JX2311230503",
+        "recipientName": "haulatul laili",
+        "recipientPhone": "08******0640",
+        "fullAddress": "depan pintu Dermaga Branta TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Depan pintu Dermaga Branta",
+        "isCod": True,
+        "codAmount": 45000,
+        "status": "pending",
+        "lat": -7.2268,
+        "lng": 113.4489,
+        "createdAt": "2026-11-23T08:31:40.000Z"
+    },
+    {
+        "id": "pkg-20261123-33",
+        "trackingNumber": "JX2311230504",
+        "recipientName": "sinolaqua",
+        "recipientPhone": "08******0391",
+        "fullAddress": "dermaga Branta pasisir hj muhalli dermaga branta pasisir TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Dermaga Branta Pesisir Hj Muhalli",
+        "isCod": True,
+        "codAmount": 65000,
+        "status": "pending",
+        "lat": -7.2268,
+        "lng": 113.4489,
+        "createdAt": "2026-11-23T08:31:36.000Z"
+    },
+    {
+        "id": "pkg-20261123-34",
+        "trackingNumber": "JX2311230505",
+        "recipientName": "Tata oktavia",
+        "recipientPhone": "08******2010",
+        "fullAddress": "Hj.muhali gang ke utara,belok kiri,rumah oren menghadap ke utara TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Hj Muhalli gang ke utara, belok kiri, rumah oren hadap utara",
+        "isCod": True,
+        "codAmount": 55000,
+        "status": "pending",
+        "lat": -7.2266,
+        "lng": 113.4487,
+        "createdAt": "2026-11-23T08:27:07.000Z"
+    },
+    {
+        "id": "pkg-20261123-35",
+        "trackingNumber": "JX2311230506",
+        "recipientName": "tije",
+        "recipientPhone": "08******8219",
+        "fullAddress": "Dermaga branta pesisir Deket rumah h.muhalli, gang ke Utara depan rumah Tus TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Dermaga Branta deket rumah H Muhalli, gang ke utara depan rumah Tus",
+        "isCod": True,
+        "codAmount": 70000,
+        "status": "pending",
+        "lat": -7.2267,
+        "lng": 113.4488,
+        "createdAt": "2026-11-23T08:29:38.000Z"
+    },
+    {
+        "id": "pkg-20261123-36",
+        "trackingNumber": "JX2311230507",
+        "recipientName": "Diana Laili",
+        "recipientPhone": "08******3920",
+        "fullAddress": "Dermaga branta pesisir desa branta pesisir,kecamatan tlanakan kabupaten pamekasan TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Dermaga Branta Pesisir",
+        "isCod": True,
+        "codAmount": 52000,
+        "status": "pending",
+        "lat": -7.2272,
+        "lng": 113.4485,
+        "createdAt": "2026-11-23T08:30:21.000Z"
+    },
+    {
+        "id": "pkg-20261123-37",
+        "trackingNumber": "JX2311230508",
+        "recipientName": "sumiyatik",
+        "recipientPhone": "08******6802",
+        "fullAddress": "sebelah barat pintu gerbang dermaga branta pasisir terus kebarat ada toko besar warna hijau TLANAKAN",
+        "areaOrStreet": "Pelabuhan & Dermaga Branta",
+        "benchmark": "Barat pintu gerbang dermaga terus ke barat, toko besar warna hijau",
+        "isCod": True,
+        "codAmount": 85000,
+        "status": "pending",
+        "lat": -7.2276,
+        "lng": 113.4482,
+        "createdAt": "2026-11-22T09:28:23.000Z"
+    }
+]
+
+# Set orderIndex
+for i, p in enumerate(packages_37):
+    p['orderIndex'] = i + 1
+
+print(f"Total packages generated: {len(packages_37)}")
+
+# Save JSON
+with open('screenshot alamat paket/packages_23_nov_verified.json', 'w', encoding='utf-8') as f:
+    json.dump(packages_37, f, indent=2, ensure_ascii=False)
+
+# Push to Supabase
+url = 'https://nnwznokcuwrktizwuiqp.supabase.co/rest/v1/courier_sessions'
+headers = {
+    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ud3pub2tjdXdya3Rpend1aXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxNzYxMzQsImV4cCI6MjExMDc1MjEzNH0.8sEMOdBgmkWGB-UabDY8M67rTMjFIyIYRyQUlkkImrY',
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ud3pub2tjdXdya3Rpend1aXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxNzYxMzQsImV4cCI6MjExMDc1MjEzNH0.8sEMOdBgmkWGB-UabDY8M67rTMjFIyIYRyQUlkkImrY',
+    'Content-Type': 'application/json',
+    'Prefer': 'resolution=merge-duplicates'
+}
+
+settings = {
+    "courierName": "Sprinter J&T Branta Pamekasan",
+    "dropPointName": "J&T Express Drop Point Pamekasan (Trunojoyo)",
+    "dropPointAddress": "Jl. P. Trunojoyo No. 331, Pamekasan, Madura",
+    "dropPointLat": -7.1642,
+    "dropPointLng": 113.4819,
+    "defaultStrategy": "cluster-sweep",
+    "adminWhatsAppNumber": "6281295713923",
+    "customWhatsAppTemplate": "Halo {NAMA}, kami dari J&T Express akan melakukan proses delivery paket {TIPE_PAKET}dengan nomor waybill {RESI} ke alamat anda di {ALAMAT} , {KONFIRMASI_COD}\nTerima kasih"
+}
+
+payload = {
+    "session_id": "6281295713923",
+    "packages": packages_37,
+    "settings": settings,
+    "last_device": "Antigravity AI Assistant [1-by-1 Verified Sync]",
+    "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+}
+
+data_bytes = json.dumps(payload).encode('utf-8')
+req = urllib.request.Request(url, data=data_bytes, headers=headers, method='POST')
+
+try:
+    with urllib.request.urlopen(req) as resp:
+        print(f"Supabase push status: {resp.status}")
+except Exception as e:
+    print(f"Error pushing to Supabase: {e}")
