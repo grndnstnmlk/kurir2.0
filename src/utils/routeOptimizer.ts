@@ -106,9 +106,15 @@ export function generateJntDeliveryMessage(
   const cleanRecipient = rawRecipient.replace(/^kak\s+/i, '').trim() || 'Kak';
 
   const rawCod = pkg.codAmount || 0;
-  const formattedCodNumber = new Intl.NumberFormat('en-US').format(rawCod);
-
   const isCodPkg = Boolean(pkg.isCod && rawCod > 0);
+
+  // Total tagihan COD sudah ditambahkan dengan biaya pengantaran kurir 10% (sesuai nominal "Tagih" di aplikasi)
+  const calc = calculateCodWithCourierFee(rawCod);
+  const totalCod = calc.totalAmount;
+  const formattedCodNumber = new Intl.NumberFormat('en-US').format(totalCod);
+  const formattedBaseNumber = new Intl.NumberFormat('en-US').format(rawCod);
+  const formattedFeeNumber = new Intl.NumberFormat('en-US').format(calc.courierFee);
+
   const tipePaket = isCodPkg ? 'COD ' : '';
   const infoTotal = isCodPkg
     ? `Totalnya Rp【${formattedCodNumber}】`
@@ -140,6 +146,8 @@ Terima kasih`;
     .replace(/{INFO_TOTAL}/g, infoTotal)
     .replace(/{TOTAL_COD}/g, formattedCodNumber)
     .replace(/{NOMINAL_COD}/g, formattedCodNumber)
+    .replace(/{BASE_COD}/g, formattedBaseNumber)
+    .replace(/{ONGKIR_KURIR}/g, formattedFeeNumber)
     .replace(
       /{KONFIRMASI_COD}/g,
       isCodPkg

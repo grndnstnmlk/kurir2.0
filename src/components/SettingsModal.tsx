@@ -277,7 +277,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full bg-[#f4f4f5] border border-[#e4e4e7] rounded-[16px] p-3 text-[#080808] font-mono text-xs focus:outline-none focus:border-[#292929]"
             />
             <span className="text-[10px] text-[#696969] mt-1 block leading-relaxed">
-              Format Resmi J&T Sprinter. Variabel otomatis: <code className="font-bold">{'{NAMA}'}</code>, <code className="font-bold">{'{RESI}'}</code>, <code className="font-bold">{'{ALAMAT}'}</code>, <code className="font-bold">{'{TIPE_PAKET}'}</code>, <code className="font-bold">{'{INFO_TOTAL}'}</code>.
+              Format Resmi J&T Sprinter. Variabel otomatis: <code className="font-bold">{'{NAMA}'}</code>, <code className="font-bold">{'{RESI}'}</code>, <code className="font-bold">{'{ALAMAT}'}</code>, <code className="font-bold">{'{TIPE_PAKET}'}</code>, <code className="font-bold">{'{INFO_TOTAL}'}</code> (Total COD + 10% kurir).
             </span>
           </div>
 
