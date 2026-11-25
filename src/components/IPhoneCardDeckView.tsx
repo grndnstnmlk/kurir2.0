@@ -72,8 +72,30 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   onEditPackage,
   onQuickEditPhone,
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Kunci index kartu di localStorage agar tidak reset ke Stop #1 saat HP terkunci / buka WhatsApp / buka kamera
+  const [currentIndex, setCurrentIndexState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('kurir2_active_card_index');
+      if (saved !== null) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val) && val >= 0) return val;
+      }
+    } catch {}
+    return 0;
+  });
+
+  const setCurrentIndex = (val: number | ((prev: number) => number)) => {
+    setCurrentIndexState((prev) => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try {
+        localStorage.setItem('kurir2_active_card_index', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true); // Default dark AMOLED matching Refero screenshot
   const [isPinningGps, setIsPinningGps] = useState(false);
   const [isDeliveringWithPhoto, setIsDeliveringWithPhoto] = useState(false);
@@ -88,6 +110,21 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
   const photoTargetPkgRef = React.useRef<DeliveryPackage | null>(null);
 
+  // Jika app baru dibuka dan Stop #1 sudah selesai, otomatis arahkan ke paket pending pertama jika belum pernah tersimpan
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('kurir2_active_card_index');
+      if (saved === null && packages.length > 0) {
+        const firstPendingIdx = packages.findIndex(
+          (p) => p.status !== 'delivered' && p.status !== 'returned'
+        );
+        if (firstPendingIdx > 0) {
+          setCurrentIndex(firstPendingIdx);
+        }
+      }
+    } catch {}
+  }, [packages]);
+
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
       setTimeout(() => {
@@ -99,6 +136,9 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const handleTriggerCamera = () => {
     if (!currentPkg) return;
     photoTargetPkgRef.current = currentPkg;
+    try {
+      sessionStorage.setItem('kurir2_photo_target_pkg_id', currentPkg.id);
+    } catch {}
     if (cameraInputRef.current) {
       cameraInputRef.current.value = '';
       cameraInputRef.current.click();
@@ -107,7 +147,22 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   const handleCameraPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const targetPkg = photoTargetPkgRef.current || currentPkg;
+    let savedTargetId: string | null = null;
+    try {
+      savedTargetId = sessionStorage.getItem('kurir2_photo_target_pkg_id');
+    } catch {}
+
+    const targetPkg =
+      (savedTargetId ? packages.find((p) => p.id === savedTargetId) : null) ||
+      photoTargetPkgRef.current ||
+      currentPkg;
+
+    // Bersihkan kunci target setelah target berhasil dikunci
+    try {
+      sessionStorage.removeItem('kurir2_photo_target_pkg_id');
+    } catch {}
+    photoTargetPkgRef.current = null;
+
     if (!file || !targetPkg || !onDeliverWithPhoto) return;
 
     setIsDeliveringWithPhoto(true);
@@ -119,14 +174,19 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     if (res.success) {
       setPinToast({
         type: 'success',
-        text: `🎉 Foto rumah tersimpan & Paket #${targetPkg.orderIndex} Selesai Terkirim!`,
+        text: `🎉 Foto rumah tersimpan & Paket #${targetPkg.orderIndex} (${targetPkg.recipientName}) Selesai Terkirim!`,
       });
-      // Jika filterPendingOnly aktif, targetPkg otomatis keluar dari displayPackages
-      // sehingga kartu paket berikutnya otomatis bergeser ke safeIndex saat ini.
-      // Hanya geser index (+1) jika filterPendingOnly TIDAK aktif.
+
+      // Hanya geser index (+1) jika user masih berada di kartu yang baru saja difoto (mencegah loncat kartu yang salah)
       setTimeout(() => {
-        if (!filterPendingOnly && safeIndex < packages.length - 1) {
-          setCurrentIndex(safeIndex + 1);
+        if (!filterPendingOnly) {
+          setCurrentIndex((prev) => {
+            const currentShown = packages[prev];
+            if (currentShown && currentShown.id === targetPkg.id && prev < packages.length - 1) {
+              return prev + 1;
+            }
+            return prev;
+          });
         }
         setPinToast(null);
       }, 1200);
@@ -292,8 +352,14 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
     // Otomatis geser ke antaran berikutnya secara mulus setelah 700ms (hanya jika mode fokus sisa tidak aktif)
     setTimeout(() => {
-      if (!filterPendingOnly && safeIndex < displayPackages.length - 1) {
-        setCurrentIndex(safeIndex + 1);
+      if (!filterPendingOnly) {
+        setCurrentIndex((prev) => {
+          const currentShown = packages[prev];
+          if (currentShown && currentShown.id === pkg.id && prev < packages.length - 1) {
+            return prev + 1;
+          }
+          return prev;
+        });
       }
       setPinToast(null);
     }, 700);
@@ -331,8 +397,14 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
       // Otomatis geser ke kartu paket antaran berikutnya setelah 700ms (hanya jika mode fokus sisa tidak aktif)
       setTimeout(() => {
-        if (!filterPendingOnly && safeIndex < displayPackages.length - 1) {
-          setCurrentIndex(safeIndex + 1);
+        if (!filterPendingOnly) {
+          setCurrentIndex((prev) => {
+            const currentShown = packages[prev];
+            if (currentShown && currentShown.id === pkg.id && prev < packages.length - 1) {
+              return prev + 1;
+            }
+            return prev;
+          });
         }
         setPinToast(null);
       }, 700);
@@ -341,19 +413,27 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
+    if (touchStartX === null || touchStartY === null) return;
     const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchStartX - touchEndX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchStartX - touchEndX;
+    const diffY = touchStartY - touchEndY;
 
-    if (diff > 45 && safeIndex < displayPackages.length - 1) {
-      setCurrentIndex(safeIndex + 1);
-    } else if (diff < -45 && safeIndex > 0) {
-      setCurrentIndex(safeIndex - 1);
+    // Hanya geser kartu jika gerakan horizontal dominan (bukan scroll vertikal) dan minimal 70px
+    if (Math.abs(diffX) >= 70 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+      if (diffX > 0 && safeIndex < displayPackages.length - 1) {
+        setCurrentIndex(safeIndex + 1);
+      } else if (diffX < 0 && safeIndex > 0) {
+        setCurrentIndex(safeIndex - 1);
+      }
     }
+
     setTouchStartX(null);
+    setTouchStartY(null);
   };
 
   const handleSelectPackageFromSearch = (pkg: DeliveryPackage) => {
@@ -437,8 +517,6 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
       className={`min-h-[calc(100vh-130px)] w-full flex flex-col justify-between transition-colors duration-300 font-aspekta select-none ${
         isDarkMode ? 'bg-[#000000] text-white' : 'bg-[#fafafa] text-[#222222]'
       }`}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Container calibrated for iPhone 16 Pro Max viewport (max-w-[440px]) */}
       <div className="w-full max-w-[440px] mx-auto px-5 py-3 flex flex-col justify-between flex-1 relative">
@@ -557,7 +635,11 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
         </div>
 
         {/* 3. The Prominent Hero Card (Exact Refero Design with Amber Package Badge) */}
-        <div className="my-2 relative z-10 group">
+        <div
+          className="my-2 relative z-10 group"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div
             className={`w-full rounded-[34px] p-6 transition-all duration-300 relative shadow-2xl overflow-hidden flex flex-col justify-between min-h-[280px] sm:min-h-[300px] ${
               isDarkMode
@@ -923,12 +1005,20 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             ) : isDelivered ? (
               <>
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span>✅ Paket Terkirim (Ketuk untuk Foto Ulang)</span>
+                <span>
+                  ✅ Paket #{currentPkg.orderIndex} (
+                  {currentPkg.recipientName.replace(/\(.*?\)/g, '').trim().split(' ')[0]}
+                  ) Terkirim (Foto Ulang)
+                </span>
               </>
             ) : (
               <>
                 <Camera className="w-5 h-5 text-white" />
-                <span>📸 Foto Rumah & Selesai Kirim</span>
+                <span>
+                  📸 Foto Rumah #{currentPkg.orderIndex} (
+                  {currentPkg.recipientName.replace(/\(.*?\)/g, '').trim().split(' ')[0]}
+                  ) & Selesai Kirim
+                </span>
               </>
             )}
           </button>

@@ -185,6 +185,19 @@ export function App() {
               returnedAt: localPkg.returnedAt,
               returnReason: localPkg.returnReason,
               statusNotes: localPkg.statusNotes || rPkg.statusNotes,
+              proofPhotoUrl: localPkg.proofPhotoUrl || rPkg.proofPhotoUrl,
+              lat: localPkg.lat || rPkg.lat,
+              lng: localPkg.lng || rPkg.lng,
+              areaOrStreet: localPkg.areaOrStreet || rPkg.areaOrStreet,
+              benchmark: localPkg.benchmark || rPkg.benchmark,
+            };
+          }
+
+          // Pertahankan foto rumah lokal jika remote belum tersinkron
+          if (localPkg.proofPhotoUrl && !rPkg.proofPhotoUrl) {
+            return {
+              ...rPkg,
+              proofPhotoUrl: localPkg.proofPhotoUrl,
             };
           }
           return rPkg;
