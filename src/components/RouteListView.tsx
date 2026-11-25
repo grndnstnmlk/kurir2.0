@@ -227,14 +227,9 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                   </span>
                 )}
                 {pkg.isCod ? (
-                  <div className="inline-flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] text-[#fafafa]">
-                      Tagih: {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
-                    </span>
-                    <span className="text-[10px] text-neutral-500 font-medium">
-                      (Paket {formatRupiah(pkg.codAmount)} + Ongkir {calculateCodWithCourierFee(pkg.codAmount).formattedFee})
-                    </span>
-                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] text-[#fafafa]">
+                    COD: {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
+                  </span>
                 ) : (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f4f4f5] text-[#696969] border border-[#e4e4e7]">
                     Lunas

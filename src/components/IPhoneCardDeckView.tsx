@@ -690,13 +690,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 </div>
 
                 {currentPkg.isCod ? (
-                  <div className="flex flex-col items-end">
-                    <div className="bg-neutral-950 text-white px-3 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm flex items-center gap-1.5">
-                      <span>Tagih: {calculateCodWithCourierFee(currentPkg.codAmount).formattedTotal}</span>
-                    </div>
-                    <span className="text-[10px] text-neutral-500 font-medium mt-0.5">
-                      Paket {formatRupiah(currentPkg.codAmount)} + Ongkir {calculateCodWithCourierFee(currentPkg.codAmount).formattedFee}
-                    </span>
+                  <div className="bg-neutral-950 text-white px-3.5 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm flex items-center gap-1.5">
+                    <span>COD: {calculateCodWithCourierFee(currentPkg.codAmount).formattedTotal}</span>
                   </div>
                 ) : (
                   <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold tracking-tight">
@@ -1057,7 +1052,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                           </span>
                           {pkg.isCod ? (
                             <span className="bg-neutral-900 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">
-                              Tagih {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
+                              COD {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
                             </span>
                           ) : (
                             <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded-md font-medium">
@@ -1368,7 +1363,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                             {pkg.isCod ? (
                               <span className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                                Tagih {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
+                                COD {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
                               </span>
                             ) : (
                               <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-300/40">

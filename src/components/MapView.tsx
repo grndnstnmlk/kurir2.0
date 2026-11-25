@@ -5,6 +5,7 @@ import {
   getSingleNavigationUrl,
   calculateTotalRouteDistanceKm,
   calculateEstimatedTravelTime,
+  calculateCodWithCourierFee,
 } from '../utils/routeOptimizer';
 import { Compass, CheckCircle2, Home } from 'lucide-react';
 
@@ -130,7 +131,7 @@ export const MapView: React.FC<MapViewProps> = ({
           ${
             pkg.isCod
               ? `<div style="background: #f4f4f5; color: #080808; font-weight: 600; font-size: 11px; padding: 3px 8px; border-radius: 999px; margin: 6px 0; border: 1px solid #e4e4e7;">
-                  COD: Rp ${pkg.codAmount.toLocaleString('id-ID')}
+                  COD: ${calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
                 </div>`
               : `<div style="background: #f4f4f5; color: #696969; font-weight: 500; font-size: 11px; padding: 2px 8px; border-radius: 999px; margin: 6px 0;">
                   Lunas (Non-COD)
