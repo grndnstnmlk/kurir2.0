@@ -25,4 +25,7 @@ dist-ssr
 *.sw?
 *.mp4
 *.mov
+extracted_frames
+**/extracted_frames/**
+ocr_raw_*.json
 
