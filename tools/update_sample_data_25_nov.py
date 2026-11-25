@@ -22,7 +22,7 @@ export const DEFAULT_SETTINGS: CourierSettings = {
   defaultStrategy: 'cluster-sweep', // Bawa Sekaligus per Area / Dusun agar tidak bolak-balik ke motor
   adminWhatsAppNumber: '6281295713923',
   customWhatsAppTemplate:
-    'Halo Kak【{NAMA}】,\nSaya dari J&T Express, Mau konfirmasi paket {TIPE_PAKET}dengan nomor resi【{RESI}】ke alamat:\n【{ALAMAT}】\n\n{INFO_TOTAL}\nMohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?\n\nTerima kasih',
+    'Halo Kak【{NAMA}】,\\nSaya dari J&T Express, Mau konfirmasi paket {TIPE_PAKET}dengan nomor resi【{RESI}】ke alamat:\\n【{ALAMAT}】\\n\\n{INFO_TOTAL}\\nMohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?\\n\\nTerima kasih',
 };
 
 /**
