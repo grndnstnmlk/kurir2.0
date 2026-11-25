@@ -21,6 +21,94 @@ export interface CodCalculation {
 }
 
 /**
+ * Mencari semua paket milik penerima yang sama (nama penerima sama atau nomor HP sama)
+ */
+export function getSiblingPackages(
+  targetPkg: DeliveryPackage | null | undefined,
+  allPackages: DeliveryPackage[]
+): DeliveryPackage[] {
+  if (!targetPkg || !allPackages || allPackages.length === 0) return [];
+
+  const cleanTargetName = (targetPkg.recipientName || '')
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .trim();
+  const targetPhone = (targetPkg.recipientPhone || '').replace(/\D/g, '');
+
+  return allPackages.filter((p) => {
+    // 1. Cocokkan No HP jika ada minimal 8 digit angka
+    const pPhone = (p.recipientPhone || '').replace(/\D/g, '');
+    if (targetPhone.length >= 8 && pPhone.length >= 8) {
+      if (targetPhone.endsWith(pPhone.slice(-8)) || pPhone.endsWith(targetPhone.slice(-8))) {
+        return true;
+      }
+    }
+
+    // 2. Cocokkan Nama Penerima yang sudah dibersihkan
+    const cleanPName = (p.recipientName || '')
+      .toLowerCase()
+      .replace(/\(.*?\)/g, '')
+      .replace(/[^a-z0-9]/g, ' ')
+      .trim();
+
+    if (cleanTargetName.length >= 3 && cleanPName.length >= 3) {
+      if (cleanTargetName === cleanPName) return true;
+      const wTarget = cleanTargetName.split(/\s+/).filter((w) => w.length >= 3);
+      const wP = cleanPName.split(/\s+/).filter((w) => w.length >= 3);
+      if (wTarget.length >= 2 && wP.length >= 2) {
+        const matches = wTarget.filter((w) => wP.includes(w));
+        if (matches.length >= 2) return true;
+      }
+      if (wTarget.length === 1 && wP.length === 1 && wTarget[0] === wP[0]) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+}
+
+/**
+ * Menghitung total tagihan COD gabungan dari kumpulan paket milik penerima yang sama
+ */
+export function calculateCombinedCodTotal(packages: DeliveryPackage[]): {
+  totalCodAmount: number;
+  totalBaseCod: number;
+  totalCourierFee: number;
+  codPackagesCount: number;
+  nonCodPackagesCount: number;
+  formattedTotal: string;
+} {
+  let totalCodAmount = 0;
+  let totalBaseCod = 0;
+  let totalCourierFee = 0;
+  let codPackagesCount = 0;
+  let nonCodPackagesCount = 0;
+
+  for (const pkg of packages) {
+    if (pkg.isCod && pkg.codAmount > 0) {
+      const calc = calculateCodWithCourierFee(pkg.codAmount);
+      totalCodAmount += calc.totalAmount;
+      totalBaseCod += calc.baseAmount;
+      totalCourierFee += calc.courierFee;
+      codPackagesCount++;
+    } else {
+      nonCodPackagesCount++;
+    }
+  }
+
+  return {
+    totalCodAmount,
+    totalBaseCod,
+    totalCourierFee,
+    codPackagesCount,
+    nonCodPackagesCount,
+    formattedTotal: formatRupiah(totalCodAmount),
+  };
+}
+
+/**
  * Menghitung Biaya Pengantaran Kurir (10% dari harga COD, dibulatkan ke ribuan terdekat)
  * Contoh:
  * - Rp 45.000 -> 10% = Rp 4.500 -> dibulatkan jadi Rp 5.000 -> Total Tagihan: Rp 50.000
@@ -155,6 +243,55 @@ Terima kasih`;
         : 'Mohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?'
     )
     .replace(/{INFO_COD}/g, isCodPkg ? `Totalnya Rp【${formattedCodNumber}】` : 'Paket Non-COD (Sudah Lunas)');
+}
+
+/**
+ * Format Pesan Notifikasi WhatsApp J&T untuk Penerima dengan Banyak Paket Sekaligus:
+ */
+export function generateMultiPackageJntMessage(
+  packages: DeliveryPackage[]
+): string {
+  if (!packages || packages.length === 0) return '';
+  if (packages.length === 1) return generateJntDeliveryMessage(packages[0]);
+
+  const firstPkg = packages[0];
+  const rawRecipient = firstPkg.recipientName ? firstPkg.recipientName.trim() : 'Kak';
+  const cleanRecipient = rawRecipient
+    .replace(/\(.*?\)/g, '')
+    .replace(/^kak\s+/i, '')
+    .trim() || 'Kak';
+
+  const combined = calculateCombinedCodTotal(packages);
+  const formattedGrandTotal = new Intl.NumberFormat('en-US').format(combined.totalCodAmount);
+
+  // Daftar rincian resi
+  const packageLines = packages
+    .map((pkg, idx) => {
+      if (pkg.isCod && pkg.codAmount > 0) {
+        const calc = calculateCodWithCourierFee(pkg.codAmount);
+        const formattedNum = new Intl.NumberFormat('en-US').format(calc.totalAmount);
+        return `${idx + 1}. Resi【${pkg.trackingNumber}】(COD Rp【${formattedNum}】)`;
+      }
+      return `${idx + 1}. Resi【${pkg.trackingNumber}】(Non-COD / Lunas)`;
+    })
+    .join('\n');
+
+  const infoTotal =
+    combined.codPackagesCount > 0
+      ? `Total Keseluruhan (${packages.length} Paket): Rp【${formattedGrandTotal}】`
+      : `Total (${packages.length} Paket): Non-COD (Semua Lunas)`;
+
+  return `Halo Kak【${cleanRecipient}】,
+Saya dari J&T Express, Mau konfirmasi pengantaran ${packages.length} paket ke alamat:
+【${firstPkg.fullAddress}】
+
+Rincian Paket:
+${packageLines}
+
+${infoTotal}
+Mohon konfirmasinya ya, apakah benar pesanan ini milik Kakak?
+
+Terima kasih`;
 }
 
 /**

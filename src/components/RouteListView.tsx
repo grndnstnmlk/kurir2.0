@@ -18,6 +18,7 @@ import {
   ListOrdered,
   CheckCheck,
   RotateCcw,
+  Boxes,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import {
@@ -28,8 +29,11 @@ import {
   calculateCodWithCourierFee,
   formatCodWhatsAppInfo,
   generateJntDeliveryMessage,
+  getSiblingPackages,
+  calculateCombinedCodTotal,
 } from '../utils/routeOptimizer';
 import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
+import { RecipientPackagesModal } from './RecipientPackagesModal';
 
 interface RouteListViewProps {
   packages: DeliveryPackage[];
@@ -66,6 +70,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   const [pinnedPkgId, setPinnedPkgId] = useState<string | null>(null);
   const [deliveringPkgId, setDeliveringPkgId] = useState<string | null>(null);
   const [targetPhotoPkg, setTargetPhotoPkg] = useState<DeliveryPackage | null>(null);
+  const [siblingTargetPkg, setSiblingTargetPkg] = useState<DeliveryPackage | null>(null);
   const targetPhotoPkgRef = React.useRef<DeliveryPackage | null>(null);
   const routeCameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -235,6 +240,23 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                     Lunas
                   </span>
                 )}
+
+                {(() => {
+                  const siblings = getSiblingPackages(pkg, packages);
+                  if (siblings.length <= 1) return null;
+                  const combined = calculateCombinedCodTotal(siblings);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setSiblingTargetPkg(pkg)}
+                      className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                      title="Klik untuk melihat rincian & total semua paket milik penerima ini"
+                    >
+                      <Boxes className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Total {siblings.length} Paket: {combined.formattedTotal}</span>
+                    </button>
+                  );
+                })()}
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-0.5">
                 <h3 className="text-base sm:text-lg font-bold text-[#080808] tracking-[-0.015em]">
@@ -698,6 +720,17 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
           {filteredPackages.map((pkg) => renderPackageCard(pkg))}
         </div>
       )}
+
+      {/* Modal Totalan & Rincian Multi-Paket Milik 1 Orang */}
+      <RecipientPackagesModal
+        isOpen={Boolean(siblingTargetPkg)}
+        onClose={() => setSiblingTargetPkg(null)}
+        targetPackage={siblingTargetPkg}
+        allPackages={packages}
+        onUpdateStatus={onUpdateStatus}
+        onEditPackage={onEditPackage}
+        onQuickEditPhone={onQuickEditPhone}
+      />
     </div>
   );
 };

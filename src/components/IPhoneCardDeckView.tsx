@@ -25,6 +25,7 @@ import {
   CheckCheck,
   X,
   Search,
+  Boxes,
 } from 'lucide-react';
 import type { DeliveryPackage, PackageStatus, SavedHousePoint } from '../types';
 import {
@@ -34,8 +35,11 @@ import {
   formatCodWhatsAppInfo,
   formatRupiah,
   generateJntDeliveryMessage,
+  getSiblingPackages,
+  calculateCombinedCodTotal,
 } from '../utils/routeOptimizer';
 import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
+import { RecipientPackagesModal } from './RecipientPackagesModal';
 
 interface IPhoneCardDeckViewProps {
   packages: DeliveryPackage[];
@@ -75,6 +79,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [isDeliveringWithPhoto, setIsDeliveringWithPhoto] = useState(false);
   const [pinToast, setPinToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isBatchAreaOpen, setIsBatchAreaOpen] = useState(false);
+  const [isRecipientPackagesModalOpen, setIsRecipientPackagesModalOpen] = useState(false);
   const [filterPendingOnly, setFilterPendingOnly] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -417,6 +422,16 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     .filter((p) => p.isCod)
     .reduce((sum, p) => sum + p.codAmount, 0);
 
+  // Paket-paket milik penerima yang sama (untuk multi-paket 1 orang)
+  const recipientSiblingPkgs = React.useMemo(
+    () => (currentPkg ? getSiblingPackages(currentPkg, packages) : []),
+    [currentPkg, packages]
+  );
+  const recipientCombinedCod = React.useMemo(
+    () => calculateCombinedCodTotal(recipientSiblingPkgs),
+    [recipientSiblingPkgs]
+  );
+
   return (
     <div
       className={`min-h-[calc(100vh-130px)] w-full flex flex-col justify-between transition-colors duration-300 font-aspekta select-none ${
@@ -677,6 +692,35 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                   )}
                 </button>
               </div>
+
+              {/* Tombol Rincian & Totalan Multi-Paket Penerima Ini */}
+              {recipientSiblingPkgs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setIsRecipientPackagesModalOpen(true)}
+                  className="w-full mt-2.5 p-2.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 hover:from-amber-500/25 hover:to-orange-500/20 active:scale-98 border border-amber-400/40 text-neutral-900 flex items-center justify-between text-xs transition cursor-pointer shadow-2xs"
+                  title="Penerima ini memiliki beberapa paket. Ketuk untuk melihat totalan gabungan!"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <div className="w-7 h-7 rounded-xl bg-amber-500 text-neutral-950 flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                      <Boxes className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-neutral-900 flex items-center gap-1.5">
+                        <span>{recipientSiblingPkgs.length} Paket Milik Penerima Ini</span>
+                      </div>
+                      <p className="text-[10px] text-neutral-500">
+                        {recipientSiblingPkgs.filter((p) => p.status === 'delivered').length}/
+                        {recipientSiblingPkgs.length} Terantar • Ketuk untuk Rincian
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-neutral-950 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 shrink-0 shadow-xs">
+                    <span>Total: {recipientCombinedCod.formattedTotal}</span>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
+                  </div>
+                </button>
+              )}
             </div>
 
             {/* Bottom inside Card: COD Tag / Non-COD Tag & Destination Area */}
@@ -690,9 +734,31 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 </div>
 
                 {currentPkg.isCod ? (
-                  <div className="bg-neutral-950 text-white px-3.5 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (recipientSiblingPkgs.length > 1) {
+                        setIsRecipientPackagesModalOpen(true);
+                      }
+                    }}
+                    className={`bg-neutral-950 text-white px-3.5 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm flex items-center gap-1.5 transition ${
+                      recipientSiblingPkgs.length > 1
+                        ? 'cursor-pointer hover:bg-neutral-800 active:scale-95 ring-2 ring-amber-400/70 shadow-amber-500/20'
+                        : ''
+                    }`}
+                    title={
+                      recipientSiblingPkgs.length > 1
+                        ? `Penerima memiliki ${recipientSiblingPkgs.length} paket. Ketuk untuk melihat totalan gabungan!`
+                        : undefined
+                    }
+                  >
                     <span>COD: {calculateCodWithCourierFee(currentPkg.codAmount).formattedTotal}</span>
-                  </div>
+                    {recipientSiblingPkgs.length > 1 && (
+                      <span className="text-[9px] bg-amber-400 text-neutral-950 px-1.5 py-0.2 rounded-full font-black">
+                        {recipientSiblingPkgs.length} Pkt
+                      </span>
+                    )}
+                  </button>
                 ) : (
                   <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold tracking-tight">
                     Lunas (Non-COD)
@@ -1428,6 +1494,23 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal Totalan & Rincian Multi-Paket Milik 1 Orang */}
+      <RecipientPackagesModal
+        isOpen={isRecipientPackagesModalOpen}
+        onClose={() => setIsRecipientPackagesModalOpen(false)}
+        targetPackage={currentPkg}
+        allPackages={packages}
+        onUpdateStatus={onUpdateStatus}
+        onSelectPackage={(pkg) => {
+          const idx = packages.findIndex((p) => p.id === pkg.id);
+          if (idx !== -1) {
+            setCurrentIndex(idx);
+          }
+        }}
+        onEditPackage={onEditPackage}
+        onQuickEditPhone={onQuickEditPhone}
+      />
 
     </div>
   );
