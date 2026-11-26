@@ -247,7 +247,7 @@ ${items}
 💰 *REKAP KASIR & ONGKIR KURIR:*
 • Total Paket COD Selesai: ${deliveredCod.length} paket
 • Setoran Kasir J&T (Harga Paket Asli): *${formatRupiah(totalCollected)}*
-• Pendapatan Ongkir Kurir (+10% Dibulatkan): *${formatRupiah(totalDeliveredCourierFees)}*
+• Pendapatan Ongkir Kurir (+10% Dibulatkan, Maks Rp 18.387): *${formatRupiah(totalDeliveredCourierFees)}*
 👉 *Total Fisik Diterima Pembeli: ${formatRupiah(totalBilledDelivered)}*
 • Sisa COD Pending: ${formatRupiah(totalPending)}
 ${physicalBreakdown}
@@ -285,7 +285,7 @@ Terima kasih 🙏 (Laporan via Kurir 2.0)`;
               {formatRupiah(totalDeliveredCourierFees)}
             </div>
             <p className="text-[11px] text-neutral-500 mt-0.5">
-              Pendapatan ongkir kurir (+10% dibulatkan) dari {deliveredCod.length} paket terantar.
+              Pendapatan ongkir kurir (+10% dibulatkan, maks Rp 18.387/paket) dari {deliveredCod.length} paket terantar.
             </p>
           </div>
 

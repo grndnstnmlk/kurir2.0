@@ -109,17 +109,25 @@ export function calculateCombinedCodTotal(packages: DeliveryPackage[]): {
 }
 
 /**
- * Menghitung Biaya Pengantaran Kurir (10% dari harga COD, dibulatkan ke ribuan terdekat)
+ * Konstanta Biaya Pengantaran Kurir Maksimal per Paket
+ * Sesuai aturan: biaya ongkir kurir maksimal per paket adalah Rp 18.387.
+ * Jika hasil perhitungan ongkir melebihi Rp 18.387, maka biaya ongkir dibatasi maksimal Rp 18.387.
+ */
+export const MAX_COURIER_FEE_PER_PACKAGE = 18387;
+
+/**
+ * Menghitung Biaya Pengantaran Kurir (10% dari harga COD, dibulatkan ke ribuan terdekat, maksimal Rp 18.387 per paket)
  * Contoh:
  * - Rp 45.000 -> 10% = Rp 4.500 -> dibulatkan jadi Rp 5.000 -> Total Tagihan: Rp 50.000
  * - Rp 68.000 -> 10% = Rp 6.800 -> dibulatkan jadi Rp 7.000 -> Total Tagihan: Rp 75.000
  * - Rp 35.000 -> 10% = Rp 3.500 -> dibulatkan jadi Rp 4.000 -> Total Tagihan: Rp 39.000
- * - Rp 110.000 -> 10% = Rp 11.000 -> dibulatkan jadi Rp 11.000 -> Total Tagihan: Rp 121.000
+ * - Rp 261.590 -> 10% = Rp 26.159 -> Rp 26.000 -> karena > 18.387, ongkir dibatasi jadi Rp 18.387 -> Total Tagihan: Rp 279.977
  */
 export function calculateCodWithCourierFee(
   baseCodAmount: number,
   percentage: number = 10,
-  roundToThousands: boolean = true
+  roundToThousands: boolean = true,
+  maxCourierFee: number = MAX_COURIER_FEE_PER_PACKAGE
 ): CodCalculation {
   if (baseCodAmount <= 0) {
     return {
@@ -139,6 +147,11 @@ export function calculateCodWithCourierFee(
     courierFee = Math.max(1000, Math.round(rawFee / 1000) * 1000);
   } else {
     courierFee = Math.round(rawFee);
+  }
+
+  // Batasi biaya ongkir maksimal per paket Rp 18.387
+  if (courierFee > maxCourierFee) {
+    courierFee = maxCourierFee;
   }
 
   const totalAmount = baseCodAmount + courierFee;
