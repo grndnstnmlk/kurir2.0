@@ -19,6 +19,7 @@ interface HistoryViewProps {
   onArchiveToday: (notes?: string) => void;
   onDeleteHistory: (id: string) => void;
   onRestoreHistory: (entry: DailyHistoryEntry) => void;
+  onResetToToday?: () => void;
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({
@@ -28,6 +29,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   onArchiveToday,
   onDeleteHistory,
   onRestoreHistory,
+  onResetToToday,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -127,6 +129,27 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
         </button>
       </div>
 
+      {/* Shortcut Kembali ke Hari Ini */}
+      {onResetToToday && (
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div>
+            <p className="text-xs font-bold text-emerald-950 dark:text-emerald-300">
+              ⚡ Antaran Hari Ini (Kamis, 26 November 2026)
+            </p>
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+              Tampilkan kembali 44 kartu paket pengantaran aktif hari ini di Branta Pesisir.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onResetToToday}
+            className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-xs font-bold transition shadow-sm cursor-pointer shrink-0 text-center"
+          >
+            Buka Paket Hari Ini (26 Nov)
+          </button>
+        </div>
+      )}
+
       {/* Minimal Search Bar */}
       <div className="relative">
         <Search className="w-4 h-4 text-[#696969] absolute left-4 top-1/2 -translate-y-1/2" />
@@ -179,8 +202,16 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
                       {copiedId === entry.id ? 'Tersalin!' : 'Salin Laporan WA'}
                     </button>
                     <button
-                      onClick={() => onRestoreHistory(entry)}
-                      className="px-3.5 py-1.5 rounded-full bg-[#fafafa] text-[#222222] font-medium border border-[#e4e4e7] transition cursor-pointer"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Buka arsip ${entry.displayDate} ke kartu antaran?\n\nAnda dapat kembali ke antaran hari ini (26 Nov) kapan saja lewat tombol "Buka Paket Hari Ini".`
+                          )
+                        ) {
+                          onRestoreHistory(entry);
+                        }
+                      }}
+                      className="px-3.5 py-1.5 rounded-full bg-[#fafafa] hover:bg-neutral-100 text-[#222222] font-medium border border-[#e4e4e7] transition cursor-pointer"
                     >
                       Buka ke Hari Aktif
                     </button>

@@ -736,14 +736,15 @@ export function App() {
   };
 
   const handleLoadSampleData = () => {
-    const reordered = optimizeDeliveryRoute(
-      INITIAL_SAMPLE_PACKAGES,
-      settings.dropPointLat,
-      settings.dropPointLng,
-      strategy
-    );
-    setPackages(reordered);
-    pushSessionToCloud(sessionId, reordered, settings);
+    setPackages(INITIAL_SAMPLE_PACKAGES);
+    pushSessionToCloud(sessionId, INITIAL_SAMPLE_PACKAGES, settings);
+    try {
+      localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(INITIAL_SAMPLE_PACKAGES));
+      localStorage.removeItem('kurir2_active_card_index');
+    } catch (e) {
+      console.error(e);
+    }
+    setActiveTab('deck');
   };
 
   const handleArchiveToday = (notes?: string) => {
@@ -891,6 +892,7 @@ export function App() {
             onDeliverWithPhoto={handleDeliverWithPhoto}
             onEditPackage={handleOpenEditPackage}
             onQuickEditPhone={handleOpenQuickPhone}
+            onResetToToday={handleLoadSampleData}
           />
         )}
 
@@ -950,7 +952,7 @@ export function App() {
                   onClick={handleLoadSampleData}
                   className="w-full py-3 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs rounded-full border border-[#e4e4e7] transition cursor-pointer"
                 >
-                  Muat 36 Paket Hari Ini (22 November 2026)
+                  Muat 44 Paket Hari Ini (26 November 2026)
                 </button>
               </div>
             </div>
@@ -969,6 +971,7 @@ export function App() {
             onArchiveToday={handleArchiveToday}
             onDeleteHistory={handleDeleteHistory}
             onRestoreHistory={handleRestoreHistory}
+            onResetToToday={handleLoadSampleData}
           />
         )}
       </main>

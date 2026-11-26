@@ -55,6 +55,7 @@ interface IPhoneCardDeckViewProps {
   onDeliverWithPhoto?: (pkg: DeliveryPackage, file: File) => Promise<{ success: boolean; error?: string }>;
   onEditPackage?: (pkg: DeliveryPackage) => void;
   onQuickEditPhone?: (pkg: DeliveryPackage) => void;
+  onResetToToday?: () => void;
 }
 
 export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
@@ -71,7 +72,11 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   onDeliverWithPhoto,
   onEditPackage,
   onQuickEditPhone,
+  onResetToToday,
 }) => {
+  const isViewingPastArchive =
+    packages.length > 0 &&
+    !packages.some((p) => p.id?.includes('20261126') || p.createdAt?.includes('2026-11-26'));
   // Kunci index kartu di localStorage agar tidak reset ke Stop #1 saat HP terkunci / buka WhatsApp / buka kamera
   const [currentIndex, setCurrentIndexState] = useState(() => {
     try {
@@ -530,6 +535,28 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             <span className="absolute top-72 right-12 w-2 h-2 bg-white/30 rounded-full" />
             <span className="absolute bottom-28 left-8 w-2 h-1 bg-white/40 rounded -rotate-45" />
             <span className="absolute bottom-16 right-10 w-1.5 h-1.5 bg-white/30 rounded-full" />
+          </div>
+        )}
+
+        {/* Warning Banner jika sedang membuka arsip masa lalu */}
+        {isViewingPastArchive && (
+          <div className="mb-2 p-3 bg-amber-500/20 border border-amber-500/40 rounded-2xl flex items-center justify-between gap-2 text-xs text-amber-200 shadow-lg z-20">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base shrink-0">⚠️</span>
+              <div className="min-w-0">
+                <p className="font-bold text-amber-300 truncate">Sedang Membuka Arsip Kemarin</p>
+                <p className="text-[10px] text-amber-200/80 truncate">Tampil {packages.length} paket arsip.</p>
+              </div>
+            </div>
+            {onResetToToday && (
+              <button
+                type="button"
+                onClick={onResetToToday}
+                className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-full transition shadow-sm shrink-0 cursor-pointer text-[11px]"
+              >
+                Kembali ke Hari Ini
+              </button>
+            )}
           </div>
         )}
 
