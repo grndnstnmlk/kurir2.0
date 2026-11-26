@@ -6,7 +6,12 @@ with open('screenshot alamat paket/packages_26_nov_verified.json', 'r', encoding
 with open('screenshot alamat paket/packages_25_nov_verified.json', 'r', encoding='utf-8') as f:
     packages_25 = json.load(f)
 
-cod_25_total = sum(p.get('codAmount', 0) for p in packages_25)
+for p in packages_25:
+    p['status'] = 'delivered'
+    if not p.get('deliveredAt'):
+        p['deliveredAt'] = '2026-11-25T17:30:00.000Z'
+
+cod_25_total = sum(p.get('codAmount', 0) for p in packages_25 if p.get('isCod'))
 
 # Group by zone for clean readability
 zones = {}
@@ -75,9 +80,9 @@ export const INITIAL_SAMPLE_HISTORY: DailyHistoryEntry[] = [
     rescheduledCount: 0,
     codCollected: {cod_25_total},
     totalCodTarget: {cod_25_total},
-    archivedAt: '2026-11-25T17:45:00.000Z',
-    notes: 'Rute Branta Pesisir & Tlanakan selesai lancar. Setoran COD pas.',
-    packages: [],
+    archivedAt: '2026-11-25T18:00:00.000Z',
+    notes: 'Rute Branta Pesisir & Tlanakan selesai lancar (53 paket). Setoran COD pas.',
+    packages: {json.dumps(packages_25, indent=6)},
   }},
   {{
     id: 'history-sample-2026-11-24',
