@@ -40,6 +40,7 @@ import {
 } from '../utils/routeOptimizer';
 import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
 import { RecipientPackagesModal } from './RecipientPackagesModal';
+import { ACTIVE_DELIVERY_DATE, ACTIVE_DELIVERY_SHORT_LABEL } from '../utils/sampleData';
 
 interface IPhoneCardDeckViewProps {
   packages: DeliveryPackage[];
@@ -74,9 +75,10 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   onQuickEditPhone,
   onResetToToday,
 }) => {
+  const activeDateCompact = ACTIVE_DELIVERY_DATE.replace(/-/g, '');
   const isViewingPastArchive =
     packages.length > 0 &&
-    !packages.some((p) => p.id?.includes('20261126') || p.createdAt?.includes('2026-11-26'));
+    !packages.some((p) => p.id?.includes(activeDateCompact) || p.createdAt?.includes(ACTIVE_DELIVERY_DATE));
   // Kunci index kartu di localStorage agar tidak reset ke Stop #1 saat HP terkunci / buka WhatsApp / buka kamera
   const [currentIndex, setCurrentIndexState] = useState(() => {
     try {
@@ -115,11 +117,24 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
   const photoTargetPkgRef = React.useRef<DeliveryPackage | null>(null);
 
-  // Jika app baru dibuka dan Stop #1 sudah selesai, otomatis arahkan ke paket pending pertama jika belum pernah tersimpan
+  // Jika app baru dibuka ATAU daftar paket berganti hari/batch baru, arahkan otomatis ke paket pending pertama
   useEffect(() => {
+    if (packages.length === 0) return;
     try {
-      const saved = localStorage.getItem('kurir2_active_card_index');
-      if (saved === null && packages.length > 0) {
+      const deckSignature = `${packages.length}:${packages[0]?.id?.slice(0, 12) || packages[0]?.createdAt?.slice(0, 10) || ''}`;
+      const savedSig = localStorage.getItem('kurir2_active_deck_signature');
+      const savedIdx = localStorage.getItem('kurir2_active_card_index');
+
+      if (savedSig !== deckSignature) {
+        localStorage.setItem('kurir2_active_deck_signature', deckSignature);
+        const firstPendingIdx = packages.findIndex(
+          (p) => p.status !== 'delivered' && p.status !== 'returned'
+        );
+        setCurrentIndex(firstPendingIdx >= 0 ? firstPendingIdx : 0);
+        return;
+      }
+
+      if (savedIdx === null) {
         const firstPendingIdx = packages.findIndex(
           (p) => p.status !== 'delivered' && p.status !== 'returned'
         );
@@ -554,7 +569,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 onClick={onResetToToday}
                 className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-full transition shadow-sm shrink-0 cursor-pointer text-[11px]"
               >
-                Kembali ke Hari Ini
+                Kembali ke Hari Ini ({ACTIVE_DELIVERY_SHORT_LABEL})
               </button>
             )}
           </div>

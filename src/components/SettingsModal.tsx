@@ -3,6 +3,11 @@ import { Settings, MapPin, X, Compass, Download, Upload, Cloud, ShieldCheck } fr
 import type { CourierSettings, RouteStrategy } from '../types';
 import { exportAppBackup, importAppBackup } from '../utils/backupManager';
 import { syncHousesWithSupabase, fetchHousesFromSupabase } from '../utils/houseManager';
+import {
+  INITIAL_SAMPLE_PACKAGES,
+  ACTIVE_DELIVERY_LABEL,
+  ACTIVE_DELIVERY_SHORT_LABEL,
+} from '../utils/sampleData';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -285,14 +290,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (confirm('Muat ulang 44 paket antaran hari ini (26 November 2026)?')) {
+                if (confirm(`Muat ulang ${INITIAL_SAMPLE_PACKAGES.length} paket antaran hari ini (${ACTIVE_DELIVERY_LABEL})?`)) {
                   onLoadSampleData();
                   onClose();
                 }
               }}
               className="px-4 py-2 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold transition cursor-pointer border border-emerald-200"
             >
-              📦 Muat 44 Paket Hari Ini (26 Nov)
+              📦 Muat {INITIAL_SAMPLE_PACKAGES.length} Paket Hari Ini ({ACTIVE_DELIVERY_SHORT_LABEL})
             </button>
 
             <button

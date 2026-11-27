@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import type { DeliveryPackage, CourierSettings, PackageStatus, RouteStrategy, DailyHistoryEntry, SavedHousePoint } from './types';
-import { DEFAULT_SETTINGS, INITIAL_SAMPLE_PACKAGES, INITIAL_SAMPLE_HISTORY } from './utils/sampleData';
+import {
+  DEFAULT_SETTINGS,
+  INITIAL_SAMPLE_PACKAGES,
+  INITIAL_SAMPLE_HISTORY,
+  ACTIVE_DELIVERY_LABEL,
+} from './utils/sampleData';
 import {
   optimizeDeliveryRoute,
   getMultiStopNavigationUrl,
@@ -56,6 +61,36 @@ import { Camera } from 'lucide-react';
 const STORAGE_KEY_PACKAGES = 'kurir2_packages_v1';
 const STORAGE_KEY_SETTINGS = 'kurir2_settings_v1';
 const STORAGE_KEY_HISTORY = 'kurir2_history_v1';
+
+const mergePackagesWithHouses = (
+  prev: DeliveryPackage[],
+  houses: SavedHousePoint[]
+): DeliveryPackage[] => {
+  let hasChange = false;
+  const updated = prev.map((p) => {
+    const match = findMatchingHouse(houses, p);
+    if (match && isSameCustomer(match, p)) {
+      const photo = match.photoUrl || p.proofPhotoUrl;
+      if (p.lat !== match.lat || p.lng !== match.lng || p.proofPhotoUrl !== photo) {
+        hasChange = true;
+        const cleanMatchBench =
+          match.benchmark && !match.benchmark.includes('Titik dikunci instan')
+            ? match.benchmark
+            : '';
+        return {
+          ...p,
+          lat: match.lat,
+          lng: match.lng,
+          areaOrStreet: p.areaOrStreet || match.areaOrStreet,
+          benchmark: p.benchmark || cleanMatchBench,
+          proofPhotoUrl: photo,
+        };
+      }
+    }
+    return p;
+  });
+  return hasChange ? updated : prev;
+};
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'deck' | 'route' | 'map' | 'scan' | 'cod' | 'history'>('deck');
@@ -137,29 +172,8 @@ export function App() {
       if (res.success && res.houses && res.houses.length > 0) {
         setSavedHouses(res.houses);
 
-        // Sinkronkan koordinat paket aktif dengan titik rumah yang sudah dikunci kurir di iPhone
-        setPackages((prev) => {
-          let hasChange = false;
-          const updated = prev.map((p) => {
-            const match = findMatchingHouse(res.houses!, p);
-            if (match && isSameCustomer(match, p)) {
-              const photo = match.photoUrl || p.proofPhotoUrl;
-              if (p.lat !== match.lat || p.lng !== match.lng || p.proofPhotoUrl !== photo) {
-                hasChange = true;
-                return {
-                  ...p,
-                  lat: match.lat,
-                  lng: match.lng,
-                  areaOrStreet: match.areaOrStreet || p.areaOrStreet,
-                  benchmark: match.benchmark || p.benchmark,
-                  proofPhotoUrl: photo,
-                };
-              }
-            }
-            return p;
-          });
-          return hasChange ? updated : prev;
-        });
+        // Sinkronkan koordinat & foto paket aktif dengan titik rumah yang sudah dikunci kurir (pertahankan koridor/patokan terstruktur hari ini)
+        setPackages((prev) => mergePackagesWithHouses(prev, res.houses!));
       }
     });
 
@@ -215,28 +229,7 @@ export function App() {
       fetchHousesFromSupabase(sessionId).then((res) => {
         if (res.success && res.houses) {
           setSavedHouses(res.houses);
-          setPackages((prev) => {
-            let hasChange = false;
-            const updated = prev.map((p) => {
-              const match = findMatchingHouse(res.houses!, p);
-              if (match && isSameCustomer(match, p)) {
-                const photo = match.photoUrl || p.proofPhotoUrl;
-                if (p.lat !== match.lat || p.lng !== match.lng || p.proofPhotoUrl !== photo) {
-                  hasChange = true;
-                  return {
-                    ...p,
-                    lat: match.lat,
-                    lng: match.lng,
-                    areaOrStreet: match.areaOrStreet || p.areaOrStreet,
-                    benchmark: match.benchmark || p.benchmark,
-                    proofPhotoUrl: photo,
-                  };
-                }
-              }
-              return p;
-            });
-            return hasChange ? updated : prev;
-          });
+          setPackages((prev) => mergePackagesWithHouses(prev, res.houses!));
         }
       });
     });
@@ -741,6 +734,7 @@ export function App() {
     try {
       localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(INITIAL_SAMPLE_PACKAGES));
       localStorage.removeItem('kurir2_active_card_index');
+      localStorage.removeItem('kurir2_active_deck_signature');
     } catch (e) {
       console.error(e);
     }
@@ -952,7 +946,7 @@ export function App() {
                   onClick={handleLoadSampleData}
                   className="w-full py-3 bg-[#f4f4f5] hover:bg-[#e4e4e7] active:scale-95 text-[#222222] font-medium text-xs rounded-full border border-[#e4e4e7] transition cursor-pointer"
                 >
-                  Muat 44 Paket Hari Ini (26 November 2026)
+                  Muat {INITIAL_SAMPLE_PACKAGES.length} Paket Hari Ini ({ACTIVE_DELIVERY_LABEL})
                 </button>
               </div>
             </div>

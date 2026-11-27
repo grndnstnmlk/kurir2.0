@@ -11,6 +11,11 @@ import {
   Search,
 } from 'lucide-react';
 import type { DailyHistoryEntry, DeliveryPackage, CourierSettings } from '../types';
+import {
+  INITIAL_SAMPLE_PACKAGES,
+  ACTIVE_DELIVERY_LABEL,
+  ACTIVE_DELIVERY_SHORT_LABEL,
+} from '../utils/sampleData';
 
 interface HistoryViewProps {
   history: DailyHistoryEntry[];
@@ -134,10 +139,10 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div>
             <p className="text-xs font-bold text-emerald-950 dark:text-emerald-300">
-              ⚡ Antaran Hari Ini (Kamis, 26 November 2026)
+              ⚡ Antaran Hari Ini ({ACTIVE_DELIVERY_LABEL})
             </p>
             <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
-              Tampilkan kembali 44 kartu paket pengantaran aktif hari ini di Branta Pesisir.
+              Tampilkan kembali {INITIAL_SAMPLE_PACKAGES.length} kartu paket pengantaran aktif hari ini di Branta Pesisir.
             </p>
           </div>
           <button
@@ -145,7 +150,7 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
             onClick={onResetToToday}
             className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-xs font-bold transition shadow-sm cursor-pointer shrink-0 text-center"
           >
-            Buka Paket Hari Ini (26 Nov)
+            Buka Paket Hari Ini ({ACTIVE_DELIVERY_SHORT_LABEL})
           </button>
         </div>
       )}
@@ -205,7 +210,7 @@ ${entry.notes ? `📝 Catatan: ${entry.notes}` : ''}
                       onClick={() => {
                         if (
                           window.confirm(
-                            `Buka arsip ${entry.displayDate} ke kartu antaran?\n\nAnda dapat kembali ke antaran hari ini (26 Nov) kapan saja lewat tombol "Buka Paket Hari Ini".`
+                            `Buka arsip ${entry.displayDate} ke kartu antaran?\n\nAnda dapat kembali ke antaran hari ini (${ACTIVE_DELIVERY_SHORT_LABEL}) kapan saja lewat tombol "Buka Paket Hari Ini".`
                           )
                         ) {
                           onRestoreHistory(entry);
