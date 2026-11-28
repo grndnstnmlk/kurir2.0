@@ -34,6 +34,7 @@ import {
 } from '../utils/routeOptimizer';
 import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
 import { RecipientPackagesModal } from './RecipientPackagesModal';
+import { CodDetailModal } from './CodDetailModal';
 
 interface RouteListViewProps {
   packages: DeliveryPackage[];
@@ -71,6 +72,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   const [deliveringPkgId, setDeliveringPkgId] = useState<string | null>(null);
   const [targetPhotoPkg, setTargetPhotoPkg] = useState<DeliveryPackage | null>(null);
   const [siblingTargetPkg, setSiblingTargetPkg] = useState<DeliveryPackage | null>(null);
+  const [codDetailTargetPkg, setCodDetailTargetPkg] = useState<DeliveryPackage | null>(null);
   const targetPhotoPkgRef = React.useRef<DeliveryPackage | null>(null);
   const routeCameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -232,13 +234,23 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
                   </span>
                 )}
                 {pkg.isCod ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] text-[#fafafa]">
+                  <button
+                    type="button"
+                    onClick={() => setCodDetailTargetPkg(pkg)}
+                    className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#292929] hover:bg-[#080808] text-[#fafafa] cursor-pointer active:scale-95 transition"
+                    title="Ketuk untuk melihat rincian tagihan COD"
+                  >
                     COD: {calculateCodWithCourierFee(pkg.codAmount).formattedTotal}
-                  </span>
+                  </button>
                 ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f4f4f5] text-[#696969] border border-[#e4e4e7]">
+                  <button
+                    type="button"
+                    onClick={() => setCodDetailTargetPkg(pkg)}
+                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#696969] border border-[#e4e4e7] cursor-pointer active:scale-95 transition"
+                    title="Ketuk untuk melihat rincian paket"
+                  >
                     Lunas
-                  </span>
+                  </button>
                 )}
 
                 {(() => {
@@ -729,6 +741,16 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
         allPackages={packages}
         onUpdateStatus={onUpdateStatus}
         onEditPackage={onEditPackage}
+        onQuickEditPhone={onQuickEditPhone}
+      />
+
+      {/* Modal Rincian Tagihan COD */}
+      <CodDetailModal
+        isOpen={Boolean(codDetailTargetPkg)}
+        onClose={() => setCodDetailTargetPkg(null)}
+        targetPackage={codDetailTargetPkg}
+        allPackages={packages}
+        whatsAppTemplate={whatsAppTemplate}
         onQuickEditPhone={onQuickEditPhone}
       />
     </div>

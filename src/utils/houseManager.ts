@@ -1,31 +1,40 @@
 import type { SavedHousePoint, DeliveryPackage } from '../types';
 import { supabase } from './supabaseClient';
 import { getActiveSessionId } from './cloudSyncManager';
+import {
+  savePhotoToCache,
+  savePhotosBatchToCache,
+  getAllCachedPhotos,
+  deletePhotoFromCache,
+} from './photoCache';
 
 const STORAGE_KEY_SAVED_HOUSES = 'kurir2_saved_house_points';
 
 /**
- * Menyimpan titik rumah ke LocalStorage dengan proteksi kuota 5MB browser.
- * Jika memori penuh karena ukuran foto Base64, foto pada data lama otomatis disusutkan
- * sementara seluruh metadata, koordinat GPS, dan patokan rumah tetap tersimpan 100%.
+ * Menyimpan metadata titik rumah ke LocalStorage dengan proteksi kuota 5MB browser.
+ * Foto lengkap selalu disimpan aman di IndexedDB dan Cloud Supabase agar tidak pernah hilang.
  */
 export function saveHousesToLocalStorageSafely(houses: SavedHousePoint[]): void {
+  // Urutkan agar 3 rumah dengan foto terbaru tetap ada di LocalStorage untuk render instan
+  const withSortedPhotos = [...houses].sort((a, b) => {
+    const ta = new Date(a.updatedAt || a.savedAt || 0).getTime();
+    const tb = new Date(b.updatedAt || b.savedAt || 0).getTime();
+    return tb - ta;
+  });
+  const topIds = new Set(withSortedPhotos.filter((h) => h.photoUrl).slice(0, 3).map((h) => h.id));
+  const compactForLs = houses.map((h) =>
+    h.photoUrl && !topIds.has(h.id) ? { ...h, photoUrl: undefined } : h
+  );
+
   try {
-    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(houses));
+    localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(compactForLs));
   } catch (quotaError) {
-    console.warn('LocalStorage quota exceeded with full photos, optimizing local cache...', quotaError);
+    console.warn('LocalStorage quota exceeded, storing house metadata only (photos remain in IndexedDB):', quotaError);
     try {
-      // Simpan foto hanya untuk 3 titik terbaru, sedangkan titik lainnya tetap aman di Cloud Supabase
-      const lightweight = houses.map((h, idx) => (idx < 3 ? h : { ...h, photoUrl: undefined }));
-      localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(lightweight));
-    } catch {
-      try {
-        // Jika masih penuh, simpan semua titik rumah & koordinat GPS tanpa foto di localStorage
-        const noPhotos = houses.map((h) => ({ ...h, photoUrl: undefined }));
-        localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(noPhotos));
-      } catch (finalErr) {
-        console.error('Failed to cache houses to localStorage:', finalErr);
-      }
+      const noPhotos = houses.map((h) => ({ ...h, photoUrl: undefined }));
+      localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(noPhotos));
+    } catch (finalErr) {
+      console.error('Failed to cache houses to localStorage:', finalErr);
     }
   }
 }
@@ -116,6 +125,11 @@ export function saveHousePoint(house: SavedHousePoint, sessionId?: string): Save
 
     saveHousesToLocalStorageSafely(updated);
 
+    // Simpan foto ke IndexedDB agar tidak hilang saat kuota LocalStorage penuh
+    if (finalHouse.photoUrl) {
+      savePhotoToCache(finalHouse.id, finalHouse.photoUrl, finalHouse.updatedAt || finalHouse.savedAt).catch(() => {});
+    }
+
     // Langsung upsert ke Cloud Supabase agar perangkat lain (PC / iPhone) langsung menerima pembaruan
     const activeSession = sessionId || getActiveSessionId();
     const singlePayload = {
@@ -132,6 +146,7 @@ export function saveHousePoint(house: SavedHousePoint, sessionId?: string): Save
       accuracy_meters: finalHouse.accuracyMeters || null,
       notes: finalHouse.notes || '',
       saved_at: finalHouse.savedAt,
+      updated_at: finalHouse.updatedAt || new Date().toISOString(),
       delivery_count: finalHouse.deliveryCount || 1,
     };
 
@@ -161,7 +176,7 @@ export async function syncHousesWithSupabase(sessionId?: string): Promise<{
   error?: string;
 }> {
   try {
-    const localHouses = getSavedHousePoints();
+    const localHouses = await hydrateHousesWithCachedPhotos(getSavedHousePoints());
     if (localHouses.length === 0) return { success: true, count: 0 };
 
     const activeSession = sessionId || getActiveSessionId();
@@ -180,15 +195,20 @@ export async function syncHousesWithSupabase(sessionId?: string): Promise<{
       accuracy_meters: h.accuracyMeters || null,
       notes: h.notes,
       saved_at: h.savedAt,
+      updated_at: h.updatedAt || h.savedAt || new Date().toISOString(),
       delivery_count: h.deliveryCount || 1,
     }));
 
-    const { error } = await supabase
-      .from('saved_houses')
-      .upsert(payload, { onConflict: 'id' });
-
-    if (error) {
-      return { success: false, count: 0, error: error.message };
+    // Upsert dalam batch kecil agar tidak timeout jika banyak foto
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < payload.length; i += BATCH_SIZE) {
+      const chunk = payload.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase
+        .from('saved_houses')
+        .upsert(chunk, { onConflict: 'id' });
+      if (error) {
+        return { success: false, count: i, error: error.message };
+      }
     }
 
     return { success: true, count: payload.length };
@@ -198,9 +218,42 @@ export async function syncHousesWithSupabase(sessionId?: string): Promise<{
 }
 
 /**
- * Mengambil data titik rumah dari Cloud Supabase (untuk sinkronisasi PC & iPhone)
+ * Mengisi kembali foto rumah dari IndexedDB ke daftar rumah lokal
  */
-export async function fetchHousesFromSupabase(sessionId?: string): Promise<{
+export async function hydrateHousesWithCachedPhotos(
+  houses: SavedHousePoint[]
+): Promise<SavedHousePoint[]> {
+  try {
+    const cached = await getAllCachedPhotos();
+    if (Object.keys(cached).length === 0) return houses;
+
+    let changed = false;
+    const hydrated = houses.map((h) => {
+      if (!h.photoUrl && cached[h.id]?.photoUrl) {
+        changed = true;
+        return { ...h, photoUrl: cached[h.id].photoUrl };
+      }
+      return h;
+    });
+    return changed ? hydrated : houses;
+  } catch {
+    return houses;
+  }
+}
+
+const HOUSE_META_COLUMNS =
+  'id,session_id,recipient_name,recipient_phone,full_address,area_or_street,benchmark,lat,lng,accuracy_meters,notes,saved_at,updated_at,delivery_count';
+
+/**
+ * Mengambil data titik rumah dari Cloud Supabase (untuk sinkronisasi PC & iPhone).
+ * 1. Ambil metadata ringan dulu (< 50 KB) agar tidak pernah timeout HTTP 500.
+ * 2. Pasangkan foto yang sudah ada di cache IndexedDB secara instan.
+ * 3. Unduh foto yang belum ter-cache dari Supabase per batch kecil (5 rumah per request).
+ */
+export async function fetchHousesFromSupabase(
+  sessionId?: string,
+  onIncrementalUpdate?: (houses: SavedHousePoint[]) => void
+): Promise<{
   success: boolean;
   houses?: SavedHousePoint[];
   error?: string;
@@ -209,7 +262,7 @@ export async function fetchHousesFromSupabase(sessionId?: string): Promise<{
     const activeSession = sessionId || getActiveSessionId();
     let query = supabase
       .from('saved_houses')
-      .select('*')
+      .select(HOUSE_META_COLUMNS)
       .order('saved_at', { ascending: false });
 
     if (activeSession) {
@@ -222,7 +275,7 @@ export async function fetchHousesFromSupabase(sessionId?: string): Promise<{
     if (!data || data.length === 0) {
       const fallback = await supabase
         .from('saved_houses')
-        .select('*')
+        .select(HOUSE_META_COLUMNS)
         .order('saved_at', { ascending: false });
       if (fallback.data && fallback.data.length > 0) {
         data = fallback.data;
@@ -232,52 +285,124 @@ export async function fetchHousesFromSupabase(sessionId?: string): Promise<{
 
     if (error) {
       console.warn('Supabase fetch houses warning:', error.message);
-      return { success: false, error: error.message };
+      const localHydrated = await hydrateHousesWithCachedPhotos(getSavedHousePoints());
+      return { success: false, houses: localHydrated, error: error.message };
     }
 
     if (!data || data.length === 0) {
-      const localHouses = getSavedHousePoints();
-      return { success: true, houses: localHouses };
+      const localHydrated = await hydrateHousesWithCachedPhotos(getSavedHousePoints());
+      return { success: true, houses: localHydrated };
     }
 
-    const remoteHouses: SavedHousePoint[] = data.map((r: any) => ({
-      id: r.id,
-      recipientName: r.recipient_name,
-      recipientPhone: r.recipient_phone || '',
-      fullAddress: r.full_address,
-      areaOrStreet: r.area_or_street || '',
-      benchmark: r.benchmark || '',
-      photoUrl: r.photo_url || undefined,
-      lat: Number(r.lat),
-      lng: Number(r.lng),
-      accuracyMeters: r.accuracy_meters ? Number(r.accuracy_meters) : undefined,
-      notes: r.notes || '',
-      savedAt: r.saved_at || new Date().toISOString(),
-      deliveryCount: r.delivery_count || 1,
-    }));
+    const cachedPhotos = await getAllCachedPhotos();
+    const localHouses = getSavedHousePoints();
+    const localById = new Map(localHouses.map((h) => [h.id, h]));
+
+    const remoteHouses: SavedHousePoint[] = data.map((r: any) => {
+      const cached = cachedPhotos[r.id];
+      const local = localById.get(r.id);
+      return {
+        id: r.id,
+        recipientName: r.recipient_name,
+        recipientPhone: r.recipient_phone || '',
+        fullAddress: r.full_address,
+        areaOrStreet: r.area_or_street || '',
+        benchmark: r.benchmark || '',
+        photoUrl: cached?.photoUrl || local?.photoUrl || undefined,
+        lat: Number(r.lat),
+        lng: Number(r.lng),
+        accuracyMeters: r.accuracy_meters ? Number(r.accuracy_meters) : undefined,
+        notes: r.notes || '',
+        savedAt: r.saved_at || new Date().toISOString(),
+        updatedAt: r.updated_at || undefined,
+        deliveryCount: r.delivery_count || 1,
+      };
+    });
 
     // Gabungkan dengan data lokal (merge) agar tidak ada data yang hilang
-    const localHouses = getSavedHousePoints();
     const map = new Map<string, SavedHousePoint>();
-    
-    // Utamakan remote houses yang tersimpan di Cloud Supabase
     remoteHouses.forEach((h) => map.set(h.id, h));
-    
-    // Pertahankan titik rumah lokal jika ada yang belum terunggah
     localHouses.forEach((h) => {
       if (!map.has(h.id)) {
-        map.set(h.id, h);
+        const cached = cachedPhotos[h.id];
+        map.set(h.id, cached?.photoUrl && !h.photoUrl ? { ...h, photoUrl: cached.photoUrl } : h);
       }
     });
 
-    const merged: SavedHousePoint[] = Array.from(map.values()).sort(
+    let merged: SavedHousePoint[] = Array.from(map.values()).sort(
       (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
     );
 
     saveHousesToLocalStorageSafely(merged);
+    if (onIncrementalUpdate) {
+      onIncrementalUpdate(merged);
+    }
+
+    // Cari ID yang punya foto di cloud tetapi belum ter-cache atau ada pembaruan lebih baru
+    let photoIdsQuery = supabase
+      .from('saved_houses')
+      .select('id,updated_at')
+      .not('photo_url', 'is', null)
+      .order('updated_at', { ascending: false });
+
+    if (activeSession) {
+      photoIdsQuery = photoIdsQuery.or(`session_id.eq.${activeSession},session_id.is.null`);
+    }
+
+    const { data: photoRowsMeta } = await photoIdsQuery;
+    const missingOrStaleIds = (photoRowsMeta || [])
+      .filter((r: any) => {
+        const cached = cachedPhotos[r.id];
+        if (!cached?.photoUrl) return true;
+        if (r.updated_at && cached.updatedAt) {
+          return new Date(r.updated_at).getTime() > new Date(cached.updatedAt).getTime();
+        }
+        return false;
+      })
+      .map((r: any) => r.id as string);
+
+    // Unduh foto dalam batch kecil (3 baris per request) agar aman dari statement timeout di koneksi lambat
+    const PHOTO_BATCH_SIZE = 3;
+    for (let i = 0; i < missingOrStaleIds.length; i += PHOTO_BATCH_SIZE) {
+      const batchIds = missingOrStaleIds.slice(i, i + PHOTO_BATCH_SIZE);
+      const { data: photoBatch, error: photoErr } = await supabase
+        .from('saved_houses')
+        .select('id,photo_url,updated_at')
+        .in('id', batchIds);
+
+      if (photoErr || !photoBatch || photoBatch.length === 0) continue;
+
+      const photoMap = new Map<string, { photoUrl: string; updatedAt?: string }>();
+      const cacheEntries: Array<{ id: string; photoUrl: string; updatedAt?: string }> = [];
+
+      for (const row of photoBatch as any[]) {
+        if (row.photo_url) {
+          photoMap.set(row.id, { photoUrl: row.photo_url, updatedAt: row.updated_at });
+          cacheEntries.push({
+            id: row.id,
+            photoUrl: row.photo_url,
+            updatedAt: row.updated_at || undefined,
+          });
+        }
+      }
+
+      if (cacheEntries.length > 0) {
+        await savePhotosBatchToCache(cacheEntries);
+        merged = merged.map((h) => {
+          const downloaded = photoMap.get(h.id);
+          return downloaded ? { ...h, photoUrl: downloaded.photoUrl, updatedAt: downloaded.updatedAt || h.updatedAt } : h;
+        });
+        if (onIncrementalUpdate) {
+          onIncrementalUpdate(merged);
+        }
+      }
+    }
+
+    saveHousesToLocalStorageSafely(merged);
     return { success: true, houses: merged };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Gagal memuat dari cloud' };
+    const localHydrated = await hydrateHousesWithCachedPhotos(getSavedHousePoints());
+    return { success: false, houses: localHydrated, error: err?.message || 'Gagal memuat dari cloud' };
   }
 }
 
@@ -289,6 +414,7 @@ export function deleteHousePoint(id: string): SavedHousePoint[] {
     const current = getSavedHousePoints();
     const updated = current.filter((h) => h.id !== id);
     saveHousesToLocalStorageSafely(updated);
+    deletePhotoFromCache(id).catch(() => {});
 
     // Hapus juga di cloud Supabase
     Promise.resolve(
@@ -318,7 +444,7 @@ export function compressHousePhoto(fileOrBlob: File | Blob): Promise<string> {
 
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const maxDimension = 800; // Cukup sangat tajam untuk melihat gerbang & tampak depan rumah
+      const maxDimension = 640; // Tajam untuk tampilan gerbang/rumah & ringan (~55-85 KB)
       let w = img.width;
       let h = img.height;
 
@@ -344,8 +470,8 @@ export function compressHousePhoto(fileOrBlob: File | Blob): Promise<string> {
 
       ctx.drawImage(img, 0, 0, w, h);
 
-      // Konversi ke Base64 JPEG kualitas 0.8
-      const base64 = canvas.toDataURL('image/jpeg', 0.8);
+      // Konversi ke Base64 JPEG kualitas 0.72
+      const base64 = canvas.toDataURL('image/jpeg', 0.72);
       resolve(base64);
     };
 
@@ -549,7 +675,8 @@ export function findMatchingHouse(
 export async function deliverWithHousePhoto(
   pkg: DeliveryPackage,
   photoFile: File,
-  customGps?: { lat: number; lng: number; accuracy?: number }
+  customGps?: { lat: number; lng: number; accuracy?: number },
+  sessionId?: string
 ): Promise<{ savedHouse: SavedHousePoint; updatedHouses: SavedHousePoint[] }> {
   // 1. Kompres foto rumah
   const photoUrl = await compressHousePhoto(photoFile);
@@ -596,6 +723,6 @@ export async function deliverWithHousePhoto(
     deliveryCount: ((isMatchValid ? matched.deliveryCount : 0) || 0) + 1,
   };
 
-  const updatedHouses = saveHousePoint(houseToSave);
+  const updatedHouses = saveHousePoint(houseToSave, sessionId);
   return { savedHouse: houseToSave, updatedHouses };
 }

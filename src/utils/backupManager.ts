@@ -1,5 +1,6 @@
 import type { SavedHousePoint, CourierSettings, DailyHistoryEntry } from '../types';
-import { getSavedHousePoints } from './houseManager';
+import { getSavedHousePoints, saveHousesToLocalStorageSafely } from './houseManager';
+import { savePhotosBatchToCache } from './photoCache';
 
 const STORAGE_KEY_PACKAGES = 'kurir2_packages_v1';
 const STORAGE_KEY_SETTINGS = 'kurir2_settings_v1';
@@ -106,8 +107,13 @@ export function importAppBackup(
           return;
         }
 
-        // Simpan titik rumah
-        localStorage.setItem(STORAGE_KEY_SAVED_HOUSES, JSON.stringify(data.savedHouses));
+        // Simpan titik rumah (metadata ke LocalStorage, foto ke IndexedDB agar tidak kena kuota 5MB)
+        saveHousesToLocalStorageSafely(data.savedHouses);
+        savePhotosBatchToCache(
+          data.savedHouses
+            .filter((h) => h.photoUrl)
+            .map((h) => ({ id: h.id, photoUrl: h.photoUrl!, updatedAt: h.updatedAt || h.savedAt }))
+        ).catch(() => {});
 
         // Pulihkan settings jika ada
         if (data.settings) {

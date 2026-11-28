@@ -28,4 +28,8 @@ dist-ssr
 extracted_frames
 **/extracted_frames/**
 ocr_raw_*.json
+flows
+**/flows
+*.har
+Prompt.txt
 

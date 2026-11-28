@@ -35,6 +35,7 @@ import {
   deleteHousePoint,
   quickRecordCurrentGpsPoint,
   fetchHousesFromSupabase,
+  hydrateHousesWithCachedPhotos,
   deliverWithHousePhoto,
   findMatchingHouse,
   isSameCustomer,
@@ -61,6 +62,23 @@ import { Camera } from 'lucide-react';
 const STORAGE_KEY_PACKAGES = 'kurir2_packages_v1';
 const STORAGE_KEY_SETTINGS = 'kurir2_settings_v1';
 const STORAGE_KEY_HISTORY = 'kurir2_history_v1';
+
+const savePackagesToLocalStorageSafely = (pkgs: DeliveryPackage[]): void => {
+  try {
+    localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(pkgs));
+  } catch {
+    try {
+      const compact = pkgs.map((p) =>
+        p.proofPhotoUrl && p.proofPhotoUrl.startsWith('data:')
+          ? { ...p, proofPhotoUrl: undefined }
+          : p
+      );
+      localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(compact));
+    } catch (e) {
+      console.error('Failed to save packages to localStorage', e);
+    }
+  }
+};
 
 const mergePackagesWithHouses = (
   prev: DeliveryPackage[],
@@ -145,11 +163,19 @@ export function App() {
 
   // Sinkronisasi Sesi Realtime Supabase (PC & iPhone otomatis tersambung)
   useEffect(() => {
+    let latestHouses: SavedHousePoint[] = getSavedHousePoints();
+
+    const applyHousesUpdate = (houses: SavedHousePoint[]) => {
+      latestHouses = houses;
+      setSavedHouses(houses);
+      setPackages((prev) => mergePackagesWithHouses(prev, houses));
+    };
+
     // 1. Ambil sesi aktif terkini dari Supabase
     fetchSessionFromCloud(sessionId).then((res) => {
       hasLoadedInitialCloudSession.current = true;
       if (res.success && res.packages && res.packages.length > 0) {
-        setPackages(res.packages);
+        setPackages(mergePackagesWithHouses(res.packages, latestHouses));
       }
     });
 
@@ -167,13 +193,14 @@ export function App() {
       }
     });
 
-    // 3. Ambil data buku titik rumah dari Supabase (PC & iPhone otomatis sinkron)
-    fetchHousesFromSupabase(sessionId).then((res) => {
-      if (res.success && res.houses && res.houses.length > 0) {
-        setSavedHouses(res.houses);
+    // 3. Isi foto rumah dari IndexedDB secara instan, lalu tarik update dari Supabase per batch ringan
+    hydrateHousesWithCachedPhotos(latestHouses).then((hydrated) => {
+      applyHousesUpdate(hydrated);
+    });
 
-        // Sinkronkan koordinat & foto paket aktif dengan titik rumah yang sudah dikunci kurir (pertahankan koridor/patokan terstruktur hari ini)
-        setPackages((prev) => mergePackagesWithHouses(prev, res.houses!));
+    fetchHousesFromSupabase(sessionId, applyHousesUpdate).then((res) => {
+      if (res.houses && res.houses.length > 0) {
+        applyHousesUpdate(res.houses);
       }
     });
 
@@ -226,10 +253,9 @@ export function App() {
 
     // 5. Berlangganan Realtime Supabase untuk Titik Rumah (saved_houses)
     const unsubHouses = subscribeToSavedHousesRealtime(sessionId, () => {
-      fetchHousesFromSupabase(sessionId).then((res) => {
-        if (res.success && res.houses) {
-          setSavedHouses(res.houses);
-          setPackages((prev) => mergePackagesWithHouses(prev, res.houses!));
+      fetchHousesFromSupabase(sessionId, applyHousesUpdate).then((res) => {
+        if (res.houses) {
+          applyHousesUpdate(res.houses);
         }
       });
     });
@@ -325,11 +351,7 @@ export function App() {
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(packages));
-    } catch (e) {
-      console.error('Failed to save packages to localStorage', e);
-    }
+    savePackagesToLocalStorageSafely(packages);
   }, [packages]);
 
   useEffect(() => {
@@ -429,11 +451,7 @@ export function App() {
         }
         return pkg;
       });
-      try {
-        localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(updatedList));
-      } catch (e) {
-        console.error('Failed to save to localStorage:', e);
-      }
+      savePackagesToLocalStorageSafely(updatedList);
       return updatedList;
     });
 
@@ -460,31 +478,13 @@ export function App() {
   };
 
   const handleRefreshHousesFromCloud = async () => {
-    const res = await fetchHousesFromSupabase(sessionId);
-    if (res.success && res.houses) {
-      setSavedHouses(res.houses);
-      setPackages((prev) => {
-        let hasChange = false;
-        const updated = prev.map((p) => {
-          const match = findMatchingHouse(res.houses!, p);
-          if (match && isSameCustomer(match, p)) {
-            const photo = match.photoUrl || p.proofPhotoUrl;
-            if (p.lat !== match.lat || p.lng !== match.lng || p.proofPhotoUrl !== photo) {
-              hasChange = true;
-              return {
-                ...p,
-                lat: match.lat,
-                lng: match.lng,
-                areaOrStreet: match.areaOrStreet || p.areaOrStreet,
-                benchmark: match.benchmark || p.benchmark,
-                proofPhotoUrl: photo,
-              };
-            }
-          }
-          return p;
-        });
-        return hasChange ? updated : prev;
-      });
+    const apply = (houses: SavedHousePoint[]) => {
+      setSavedHouses(houses);
+      setPackages((prev) => mergePackagesWithHouses(prev, houses));
+    };
+    const res = await fetchHousesFromSupabase(sessionId, apply);
+    if (res.houses) {
+      apply(res.houses);
     }
   };
 
@@ -518,11 +518,7 @@ export function App() {
           }
           return p;
         });
-        try {
-          localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(next));
-        } catch (e) {
-          console.error('Failed to persist package GPS update:', e);
-        }
+        savePackagesToLocalStorageSafely(next);
         return next;
       });
 
@@ -544,7 +540,7 @@ export function App() {
     photoFile: File
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { savedHouse, updatedHouses } = await deliverWithHousePhoto(pkg, photoFile);
+      const { savedHouse, updatedHouses } = await deliverWithHousePhoto(pkg, photoFile, undefined, sessionId);
       setSavedHouses(updatedHouses);
 
       setPackages((prev) => {
@@ -564,11 +560,7 @@ export function App() {
           return p;
         });
         pushSessionToCloud(sessionId, next, settings);
-        try {
-          localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(next));
-        } catch (e) {
-          console.error('Failed to persist package status update:', e);
-        }
+        savePackagesToLocalStorageSafely(next);
         return next;
       });
 
@@ -731,8 +723,8 @@ export function App() {
   const handleLoadSampleData = () => {
     setPackages(INITIAL_SAMPLE_PACKAGES);
     pushSessionToCloud(sessionId, INITIAL_SAMPLE_PACKAGES, settings);
+    savePackagesToLocalStorageSafely(INITIAL_SAMPLE_PACKAGES);
     try {
-      localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(INITIAL_SAMPLE_PACKAGES));
       localStorage.removeItem('kurir2_active_card_index');
       localStorage.removeItem('kurir2_active_deck_signature');
     } catch (e) {
@@ -807,11 +799,7 @@ export function App() {
 
     setPackages(remainingUnfinished);
     pushSessionToCloud(sessionId, remainingUnfinished, settings);
-    try {
-      localStorage.setItem(STORAGE_KEY_PACKAGES, JSON.stringify(remainingUnfinished));
-    } catch (e) {
-      console.error('Failed to save remaining packages:', e);
-    }
+    savePackagesToLocalStorageSafely(remainingUnfinished);
 
     setActiveTab('deck');
   };

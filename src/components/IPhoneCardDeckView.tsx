@@ -40,6 +40,7 @@ import {
 } from '../utils/routeOptimizer';
 import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
 import { RecipientPackagesModal } from './RecipientPackagesModal';
+import { CodDetailModal } from './CodDetailModal';
 import { ACTIVE_DELIVERY_DATE, ACTIVE_DELIVERY_SHORT_LABEL } from '../utils/sampleData';
 
 interface IPhoneCardDeckViewProps {
@@ -78,7 +79,11 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const activeDateCompact = ACTIVE_DELIVERY_DATE.replace(/-/g, '');
   const isViewingPastArchive =
     packages.length > 0 &&
-    !packages.some((p) => p.id?.includes(activeDateCompact) || p.createdAt?.includes(ACTIVE_DELIVERY_DATE));
+    !packages.some(
+      (p) =>
+        p.id?.includes(activeDateCompact) ||
+        (p.createdAt && p.createdAt.slice(0, 10) >= ACTIVE_DELIVERY_DATE)
+    );
   // Kunci index kartu di localStorage agar tidak reset ke Stop #1 saat HP terkunci / buka WhatsApp / buka kamera
   const [currentIndex, setCurrentIndexState] = useState(() => {
     try {
@@ -109,6 +114,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [pinToast, setPinToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isBatchAreaOpen, setIsBatchAreaOpen] = useState(false);
   const [isRecipientPackagesModalOpen, setIsRecipientPackagesModalOpen] = useState(false);
+  const [isCodDetailModalOpen, setIsCodDetailModalOpen] = useState(false);
   const [filterPendingOnly, setFilterPendingOnly] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -860,21 +866,9 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                 {currentPkg.isCod ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (recipientSiblingPkgs.length > 1) {
-                        setIsRecipientPackagesModalOpen(true);
-                      }
-                    }}
-                    className={`bg-neutral-950 text-white px-3.5 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm flex items-center gap-1.5 transition ${
-                      recipientSiblingPkgs.length > 1
-                        ? 'cursor-pointer hover:bg-neutral-800 active:scale-95 ring-2 ring-amber-400/70 shadow-amber-500/20'
-                        : ''
-                    }`}
-                    title={
-                      recipientSiblingPkgs.length > 1
-                        ? `Penerima memiliki ${recipientSiblingPkgs.length} paket. Ketuk untuk melihat totalan gabungan!`
-                        : undefined
-                    }
+                    onClick={() => setIsCodDetailModalOpen(true)}
+                    className="bg-neutral-950 text-white px-3.5 py-1 rounded-full text-xs font-bold tracking-tight shadow-sm flex items-center gap-1.5 transition cursor-pointer hover:bg-neutral-800 active:scale-95 ring-2 ring-amber-400/50"
+                    title="Ketuk untuk melihat tampilan rincian tagihan COD"
                   >
                     <span>COD: {calculateCodWithCourierFee(currentPkg.codAmount).formattedTotal}</span>
                     {recipientSiblingPkgs.length > 1 && (
@@ -884,9 +878,14 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
                     )}
                   </button>
                 ) : (
-                  <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold tracking-tight">
+                  <button
+                    type="button"
+                    onClick={() => setIsCodDetailModalOpen(true)}
+                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold tracking-tight cursor-pointer active:scale-95 transition"
+                    title="Ketuk untuk melihat rincian paket"
+                  >
                     Lunas (Non-COD)
-                  </div>
+                  </button>
                 )}
               </div>
 
@@ -1641,6 +1640,16 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
           }
         }}
         onEditPackage={onEditPackage}
+        onQuickEditPhone={onQuickEditPhone}
+      />
+
+      {/* Modal Rincian Tagihan COD (Tampilan Kartu Lengkap per Penerima) */}
+      <CodDetailModal
+        isOpen={isCodDetailModalOpen}
+        onClose={() => setIsCodDetailModalOpen(false)}
+        targetPackage={currentPkg}
+        allPackages={packages}
+        whatsAppTemplate={whatsAppTemplate}
         onQuickEditPhone={onQuickEditPhone}
       />
 
