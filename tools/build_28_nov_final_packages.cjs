@@ -437,8 +437,19 @@ const rawList = [
   },
 
   // =========================================================================
-  // ZONA 4: Dusun Mayang, Gang Macho & Sekitar Masjid Taqwa / Al-Furqon (18 Paket)
+  // ZONA 4: Dusun Mayang, Gang Macho & Sekitar Masjid Taqwa / Al-Furqon (19 Paket)
   // =========================================================================
+  {
+    resi: 'JY2393199596',
+    name: 'maco',
+    phone: '08******9596',
+    addr: 'Pasar Branta, Jalan Raya Branta Gg. Macho TLANAKAN',
+    area: '4. Dusun Mayang, Jl. Pelabuhan & Masjid Al-Furqon',
+    bench: 'Pasar Branta / Gg. Macho Dusun Mayang',
+    cod: 76558,
+    lat: -7.2206,
+    lng: 113.4484
+  },
   {
     resi: 'JY2313369945',
     name: 'Radha, Raja',
@@ -816,14 +827,21 @@ const ocrResiSet = new Set(ocrCards.map(c => c.trackingNumber));
 const finalResiSet = new Set(packages.map(p => p.trackingNumber));
 
 const missingInFinal = [...ocrResiSet].filter(r => !finalResiSet.has(r));
-const extraInFinal = [...finalResiSet].filter(r => !ocrResiSet.has(r));
-if (missingInFinal.length || extraInFinal.length || packages.length !== 69) {
+const extraInFinal = [...finalResiSet].filter(r => !ocrResiSet.has(r) && r !== 'JY2393199596');
+if (missingInFinal.length || extraInFinal.length || packages.length !== 70) {
   console.error('MISMATCH!', { missingInFinal, extraInFinal, len: packages.length });
   process.exit(1);
 }
 
-// Verify every COD matches OCR card (allowing JD0608432812 DFOD 16800)
+// Verify every COD matches OCR card (allowing JD0608432812 DFOD 16800 and new 70th package JY2393199596 COD 76558)
 packages.forEach(p => {
+  if (p.trackingNumber === 'JY2393199596') {
+    if (p.codAmount !== 76558) {
+      console.error('COD MISMATCH for JY2393199596');
+      process.exit(1);
+    }
+    return;
+  }
   const oc = ocrCards.find(c => c.trackingNumber === p.trackingNumber);
   if (p.trackingNumber === 'JD0608432812') {
     if (p.codAmount !== 16800) {
