@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
 import {
-  ChevronLeft,
-  Search,
+  X,
   Copy,
   Check,
   MapPin,
   Phone,
-  FileText,
   MessageCircle,
-  X,
-  ScanLine,
-  AlertCircle,
-  UserCheck,
+  Package,
+  Truck,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import type { DeliveryPackage } from '../types';
 import {
   getSiblingPackages,
   getSingleNavigationUrl,
   generateJntDeliveryMessage,
+  calculateCodWithCourierFee,
+  calculateCombinedCodTotal,
+  formatRupiah,
 } from '../utils/routeOptimizer';
 
 interface CodDetailModalProps {
@@ -29,16 +30,15 @@ interface CodDetailModalProps {
   onQuickEditPhone?: (pkg: DeliveryPackage) => void;
 }
 
-function formatCommaNumber(val: number): string {
-  return new Intl.NumberFormat('en-US').format(Math.max(0, Math.round(val)));
-}
-
-function formatDeliveryTimestamp(iso?: string): string {
-  if (!iso) return '2026-11-28 09:00:00';
+function formatDeliveryDate(iso?: string): string {
+  if (!iso) return '-';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return d.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export const CodDetailModal: React.FC<CodDetailModalProps> = ({
@@ -50,11 +50,11 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
   onQuickEditPhone,
 }) => {
   const [copiedResi, setCopiedResi] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
 
   if (!isOpen || !targetPackage) return null;
 
   const siblingPackages = getSiblingPackages(targetPackage, allPackages);
+  const combinedTotal = calculateCombinedCodTotal(siblingPackages);
   const cleanRecipientName =
     (targetPackage.recipientName || '').replace(/\(.*?\)/g, '').trim() || 'Penerima';
 
@@ -62,11 +62,6 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
     (targetPackage.benchmark || '')
       .replace(/^DFOD\s*Ongkir\s*—?\s*/i, '')
       .trim() || targetPackage.areaOrStreet;
-
-  const grandTotalBase = siblingPackages.reduce(
-    (sum, p) => sum + (p.isCod ? p.codAmount || 0 : 0),
-    0
-  );
 
   const handleCopyResi = (resi: string) => {
     if (navigator.clipboard) {
@@ -91,252 +86,175 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const toggleSelectAll = () => {
-    const allChecked = siblingPackages.every((p) => selectedIds[p.id]);
-    const next: Record<string, boolean> = {};
-    siblingPackages.forEach((p) => {
-      next[p.id] = !allChecked;
-    });
-    setSelectedIds(next);
-  };
-
-  const allSelected =
-    siblingPackages.length > 0 && siblingPackages.every((p) => selectedIds[p.id]);
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-xs p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md h-full sm:h-auto sm:max-h-[92vh] bg-[#f5f6f8] text-[#1f2937] sm:rounded-[28px] shadow-2xl overflow-hidden flex flex-col font-sans"
+        className="relative w-full max-w-md max-h-[92vh] bg-[#fafafa] text-[#18181b] rounded-t-[28px] sm:rounded-[28px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col font-aspekta"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Navigation Bar */}
-        <div className="bg-white px-3 py-2.5 flex items-center gap-2 border-b border-gray-100 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-800 transition cursor-pointer"
-            aria-label="Kembali"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          <div className="flex-1 bg-[#f3f4f6] rounded-full px-3 py-1.5 flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-2 truncate">
-              <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              <span className="truncate font-medium text-gray-600">
-                {targetPackage.trackingNumber}
-              </span>
+        {/* Header Kurir 2.0 */}
+        <div className="bg-[#09090b] text-white px-5 py-4 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
+              <Truck className="w-5 h-5 text-amber-400" />
             </div>
-            <ScanLine className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-700 transition cursor-pointer"
-            aria-label="Tutup"
-          >
-            <AlertCircle className="w-4 h-4 hidden sm:block" />
-            <X className="w-5 h-5 sm:hidden" />
-          </button>
-        </div>
-
-        {/* Recipient Banner */}
-        <div className="bg-gradient-to-b from-[#fcecec] via-[#fdf5f5] to-[#f5f6f8] px-4 pt-3 pb-2.5 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white border-2 border-red-200 shadow-xs flex items-center justify-center shrink-0">
-              <UserCheck className="w-5 h-5 text-red-600" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-[15px] font-bold text-gray-900 leading-tight truncate">
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
+                Kurir 2.0 • Info Pengantaran
+              </div>
+              <h2 className="text-base font-bold text-white truncate">
                 {cleanRecipientName}
               </h2>
-              <div className="flex items-center gap-2 text-xs text-gray-600 mt-0.5 flex-wrap">
-                <span>
-                  Total <strong className="text-red-600">{siblingPackages.length}</strong> item
-                </span>
-                {cleanBenchmark && (
-                  <span className="text-gray-400 uppercase tracking-wide text-[11px] truncate max-w-[210px]">
-                    • {cleanBenchmark}
-                  </span>
-                )}
-              </div>
             </div>
           </div>
 
-          {/* Alamat Lengkap Penerima */}
-          <div className="mt-2 bg-white/85 border border-red-100/80 rounded-xl px-3 py-2 text-[11px] text-gray-700 leading-snug">
-            <span className="font-semibold text-gray-900">Alamat: </span>
-            {targetPackage.fullAddress}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-zinc-200 transition cursor-pointer shrink-0"
+            aria-label="Tutup"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Ringkasan Penerima & Total */}
+        <div className="px-5 pt-4 pb-3 bg-white border-b border-zinc-200 shrink-0 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[11px] text-zinc-500 font-medium">
+                Total Pembayaran ({siblingPackages.length} Paket)
+              </div>
+              <div className="text-2xl font-extrabold tracking-tight text-zinc-950 font-mono">
+                {combinedTotal.totalCodAmount > 0 ? combinedTotal.formattedTotal : 'Lunas (Non-COD)'}
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
+              {targetPackage.areaOrStreet}
+            </span>
+          </div>
+
+          <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-3 text-xs text-zinc-700 space-y-1">
+            <div className="flex items-start gap-2">
+              <MapPin className="w-3.5 h-3.5 text-zinc-500 mt-0.5 shrink-0" />
+              <span className="leading-snug">{targetPackage.fullAddress}</span>
+            </div>
+            {cleanBenchmark && (
+              <div className="text-[11px] text-zinc-500 pl-5">
+                Patokan: <span className="font-semibold text-zinc-700">{cleanBenchmark}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Package Cards Scrollable List */}
-        <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3">
-          {siblingPackages.map((pkg) => {
-            const resi = pkg.trackingNumber || '';
-            const prefix = resi.length > 4 ? resi.slice(0, -4) : '';
-            const last4 = resi.length > 4 ? resi.slice(-4) : resi;
-
-            const isDfod =
-              resi.startsWith('JD') || /dfod/i.test(pkg.benchmark || '');
-            const isPaid = pkg.status === 'delivered' || !pkg.isCod;
-            const codVal = pkg.isCod && !isDfod ? pkg.codAmount || 0 : 0;
-            const dfodVal = pkg.isCod && isDfod ? pkg.codAmount || 0 : 0;
-            const totalVal = codVal + dfodVal;
-            const payMethod = !pkg.isCod || isDfod ? 'CC_CASH' : 'PP_PM';
-            const isChecked = Boolean(selectedIds[pkg.id]);
+        {/* Daftar Paket Milik Penerima */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {siblingPackages.map((pkg, idx) => {
+            const isPaid = pkg.status === 'delivered' || !pkg.isCod || pkg.codAmount <= 0;
+            const totalFeePkg = pkg.isCod && pkg.codAmount > 0
+              ? calculateCodWithCourierFee(pkg.codAmount).totalAmount
+              : 0;
 
             return (
               <div
                 key={pkg.id}
-                className="bg-white rounded-2xl p-3.5 shadow-xs border border-gray-200/80 space-y-2.5"
+                className="bg-white rounded-2xl p-4 border border-zinc-200 shadow-2xs space-y-3"
               >
-                {/* Row 1: Waybill & Select Circle */}
                 <div className="flex items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-base font-extrabold tracking-tight text-gray-900 font-mono">
-                        {prefix}
-                        <span className="text-red-600">{last4}</span>
+                      <Package className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                      <span className="text-[11px] font-bold text-zinc-500">
+                        Paket {idx + 1} dari {siblingPackages.length}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="font-mono text-sm font-extrabold text-zinc-950">
+                        {pkg.trackingNumber}
                       </span>
                       <button
                         type="button"
-                        onClick={() => handleCopyResi(resi)}
-                        className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition cursor-pointer"
+                        onClick={() => handleCopyResi(pkg.trackingNumber)}
+                        className="p-1 rounded-md hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition cursor-pointer"
                         title="Salin Nomor Resi"
                       >
-                        {copiedResi === resi ? (
+                        {copiedResi === pkg.trackingNumber ? (
                           <Check className="w-3.5 h-3.5 text-emerald-600" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
                       </button>
                     </div>
-
-                    {/* Row 2: EZ + COD/DFOD/Non-COD Badges */}
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        EZ
-                      </span>
-                      {pkg.isCod ? (
-                        <span className="inline-flex items-center gap-1 bg-teal-50 text-teal-700 border border-teal-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                          {isDfod ? 'DFOD' : 'COD'}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          NON-COD
-                        </span>
-                      )}
-                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedIds((prev) => ({ ...prev, [pkg.id]: !prev[pkg.id] }))
-                    }
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition cursor-pointer ${
-                      isChecked
-                        ? 'bg-red-600 border-red-600 text-white'
-                        : 'border-gray-300 bg-white'
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border shrink-0 ${
+                      isPaid
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
                     }`}
-                    aria-label="Pilih paket"
                   >
-                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                  </button>
+                    {isPaid ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>{pkg.status === 'delivered' ? 'Terkirim' : 'Lunas'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3 h-3" />
+                        <span>Bayar di Tempat</span>
+                      </>
+                    )}
+                  </span>
                 </div>
 
-                {/* Note Pill */}
-                <div className="inline-block bg-[#eef2f6] text-[#475569] text-[11px] font-medium px-2.5 py-1 rounded-md max-w-full truncate">
-                  {pkg.benchmark ? pkg.benchmark : `+ ${pkg.areaOrStreet}`}
-                </div>
-
-                {/* 2-Column Info Grid */}
-                <div className="bg-[#f8f9fb] rounded-xl p-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                {/* Detail Harga & Tanggal */}
+                <div className="bg-zinc-50 rounded-xl p-3 flex items-center justify-between gap-3 border border-zinc-100">
                   <div>
-                    <div className="text-[11px] text-gray-400">Metode Pembayaran</div>
-                    <div className="font-semibold text-gray-900 mt-0.5">{payMethod}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-gray-400">COD</div>
-                    <div className="font-semibold text-gray-900 mt-0.5">
-                      {formatCommaNumber(codVal)}
+                    <div className="text-[11px] text-zinc-500">Tanggal Antaran</div>
+                    <div className="text-xs font-semibold text-zinc-800">
+                      {formatDeliveryDate(pkg.createdAt)}
                     </div>
                   </div>
-
-                  <div>
-                    <div className="text-[11px] text-gray-400">Waktu Delivery</div>
-                    <div className="font-semibold text-gray-900 mt-0.5 text-[11px]">
-                      {formatDeliveryTimestamp(pkg.createdAt)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-gray-400">Biaya DFOD</div>
-                    <div className="font-semibold text-gray-900 mt-0.5">
-                      {formatCommaNumber(dfodVal)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[11px] text-gray-400">Status Pembayaran</div>
-                    <div
-                      className={`font-semibold mt-0.5 ${
-                        isPaid ? 'text-emerald-600' : 'text-amber-500'
-                      }`}
-                    >
-                      {isPaid ? 'Sudah Bayar' : 'Belum Bayar'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-gray-400">Total</div>
-                    <div className="font-bold text-red-600 text-sm mt-0.5">
-                      {formatCommaNumber(totalVal)}
+                  <div className="text-right">
+                    <div className="text-[11px] text-zinc-500">Total Tagihan</div>
+                    <div className="text-base font-extrabold text-zinc-950 font-mono">
+                      {totalFeePkg > 0 ? formatRupiah(totalFeePkg) : 'Rp 0 (Lunas)'}
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom Action Row */}
-                <div className="pt-1 flex items-center justify-between gap-2">
-                  <div className="flex items-center divide-x divide-gray-200 flex-1">
+                {/* Aksi Cepat */}
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <div className="flex items-center gap-1.5">
                     <a
                       href={getSingleNavigationUrl(pkg.lat, pkg.lng, pkg.fullAddress)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center py-1 text-gray-500 hover:text-gray-800 transition"
-                      title="Buka Google Maps"
+                      className="px-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold inline-flex items-center gap-1 transition"
                     >
-                      <MapPin className="w-4 h-4" />
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Peta</span>
                     </a>
                     <button
                       type="button"
                       onClick={() => onQuickEditPhone && onQuickEditPhone(pkg)}
-                      className="flex-1 flex items-center justify-center py-1 text-gray-500 hover:text-gray-800 transition cursor-pointer"
-                      title="No. HP Penerima"
+                      className="px-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold inline-flex items-center gap-1 transition cursor-pointer"
                     >
-                      <Phone className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyResi(resi)}
-                      className="flex-1 flex items-center justify-center py-1 text-gray-500 hover:text-gray-800 transition cursor-pointer"
-                      title="Salin Resi"
-                    >
-                      <FileText className="w-4 h-4" />
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>HP</span>
                     </button>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => handleWhatsApp(pkg)}
-                    className="bg-[#22c55e] hover:bg-[#16a34a] active:scale-95 text-white px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer shrink-0"
+                    className="px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                   >
-                    <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                    <MessageCircle className="w-3.5 h-3.5" />
                     <span>WhatsApp</span>
                   </button>
                 </div>
@@ -345,40 +263,18 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
           })}
         </div>
 
-        {/* Bottom Footer Bar */}
-        <div className="bg-white border-t border-gray-200 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
+        {/* Footer */}
+        <div className="bg-white border-t border-zinc-200 px-5 py-3 flex items-center justify-between gap-3 shrink-0">
+          <div className="text-[11px] text-zinc-500">
+            Rincian Pengantaran Kurir 2.0
+          </div>
           <button
             type="button"
-            onClick={toggleSelectAll}
-            className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer"
+            onClick={onClose}
+            className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition cursor-pointer"
           >
-            <span
-              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                allSelected ? 'bg-red-600 border-red-600 text-white' : 'border-gray-300'
-              }`}
-            >
-              {allSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-            </span>
-            <span>Pilih Semua</span>
+            Tutup
           </button>
-
-          <div className="flex items-center gap-2.5">
-            {siblingPackages.length > 1 && (
-              <div className="text-right">
-                <div className="text-[10px] text-gray-400 leading-none">Total Gabungan</div>
-                <div className="text-sm font-extrabold text-red-600">
-                  Rp {formatCommaNumber(grandTotalBase)}
-                </div>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold transition cursor-pointer"
-            >
-              Tutup
-            </button>
-          </div>
         </div>
       </div>
     </div>
