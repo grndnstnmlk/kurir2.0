@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { SavedHousePoint } from '../types';
 import { exportAppBackup } from '../utils/backupManager';
+import { PhotoLightboxModal, type PhotoLightboxData } from './PhotoLightboxModal';
 
 interface SavedHousesModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState<string>('all');
-  const [zoomedPhoto, setZoomedPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [zoomedPhoto, setZoomedPhoto] = useState<PhotoLightboxData | null>(null);
   const [isPinningSpot, setIsPinningSpot] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinSuccessToast, setPinSuccessToast] = useState<string | null>(null);
@@ -304,8 +305,17 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
                       {/* Photo Thumbnail */}
                       {house.photoUrl ? (
                         <div
-                          onClick={() => setZoomedPhoto({ url: house.photoUrl!, title: house.recipientName })}
-                          className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-neutral-900 border border-[#e4e4e7] shrink-0 relative group cursor-pointer shadow-xs"
+                          onClick={() =>
+                            setZoomedPhoto({
+                              url: house.photoUrl!,
+                              title: house.recipientName,
+                              address: house.fullAddress,
+                              benchmark: house.benchmark,
+                              lat: house.lat,
+                              lng: house.lng,
+                            })
+                          }
+                          className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-neutral-900 border border-[#e4e4e7] shrink-0 relative group cursor-pointer shadow-xs active:scale-95 transition"
                           title="Klik untuk perbesar foto rumah"
                         >
                           <img
@@ -423,29 +433,19 @@ export const SavedHousesModal: React.FC<SavedHousesModalProps> = ({
       </div>
 
       {/* Zoomed House Photo Lightbox */}
-      {zoomedPhoto && (
-        <div
-          onClick={() => setZoomedPhoto(null)}
-          className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 cursor-pointer"
-        >
-          <div className="max-w-xl w-full bg-neutral-900 rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl relative">
-            <div className="px-5 py-3 border-b border-neutral-800 flex items-center justify-between text-white">
-              <span className="font-bold text-sm">Foto Rumah: {zoomedPhoto.title}</span>
-              <button
-                onClick={() => setZoomedPhoto(null)}
-                className="p-1 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <img
-              src={zoomedPhoto.url}
-              alt={zoomedPhoto.title}
-              className="w-full max-h-[75vh] object-contain bg-black"
-            />
-          </div>
-        </div>
-      )}
+      <PhotoLightboxModal
+        isOpen={Boolean(zoomedPhoto)}
+        onClose={() => setZoomedPhoto(null)}
+        data={zoomedPhoto}
+        onEditPoint={
+          zoomedPhoto
+            ? () => {
+                const h = houses.find((item) => item.recipientName === zoomedPhoto.title);
+                if (h) onEditHouse(h);
+              }
+            : undefined
+        }
+      />
 
     </div>
   );

@@ -35,6 +35,7 @@ import {
 import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
 import { RecipientPackagesModal } from './RecipientPackagesModal';
 import { CodDetailModal } from './CodDetailModal';
+import { PhotoLightboxModal, type PhotoLightboxData } from './PhotoLightboxModal';
 
 interface RouteListViewProps {
   packages: DeliveryPackage[];
@@ -73,6 +74,7 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
   const [targetPhotoPkg, setTargetPhotoPkg] = useState<DeliveryPackage | null>(null);
   const [siblingTargetPkg, setSiblingTargetPkg] = useState<DeliveryPackage | null>(null);
   const [codDetailTargetPkg, setCodDetailTargetPkg] = useState<DeliveryPackage | null>(null);
+  const [zoomedPhoto, setZoomedPhoto] = useState<PhotoLightboxData | null>(null);
   const targetPhotoPkgRef = React.useRef<DeliveryPackage | null>(null);
   const routeCameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -206,6 +208,29 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
             }`}>
               #{pkg.orderIndex}
             </div>
+
+            {pkgPhotoUrl && (
+              <div
+                onClick={() =>
+                  setZoomedPhoto({
+                    url: pkgPhotoUrl,
+                    title: pkg.recipientName,
+                    address: pkg.fullAddress,
+                    benchmark: pkg.benchmark || matchingHouse?.benchmark,
+                    lat: pkg.lat,
+                    lng: pkg.lng,
+                  })
+                }
+                className="w-10 h-10 rounded-xl border border-amber-400 overflow-hidden cursor-pointer relative group shrink-0 shadow-2xs active:scale-95 transition"
+                title="Ketuk untuk melihat foto rumah"
+              >
+                <img
+                  src={pkgPhotoUrl}
+                  alt="Foto Rumah"
+                  className="w-full h-full object-cover group-hover:scale-105 transition"
+                />
+              </div>
+            )}
 
             <div>
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -445,9 +470,18 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
               {pkgPhotoUrl ? (
                 <button
                   type="button"
-                  onClick={() => onSaveHousePoint && onSaveHousePoint(pkg)}
+                  onClick={() =>
+                    setZoomedPhoto({
+                      url: pkgPhotoUrl,
+                      title: pkg.recipientName,
+                      address: pkg.fullAddress,
+                      benchmark: pkg.benchmark || matchingHouse?.benchmark,
+                      lat: pkg.lat,
+                      lng: pkg.lng,
+                    })
+                  }
                   title="Lihat foto rumah yang tersimpan"
-                  className="py-1.5 px-3 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
+                  className="py-1.5 px-3 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition active:scale-95"
                 >
                   <Home className="w-3.5 h-3.5 text-amber-600" />
                   <span>Lihat Foto</span>
@@ -751,7 +785,23 @@ export const RouteListView: React.FC<RouteListViewProps> = ({
         targetPackage={codDetailTargetPkg}
         allPackages={packages}
         whatsAppTemplate={whatsAppTemplate}
+        savedHouses={savedHouses}
         onQuickEditPhone={onQuickEditPhone}
+      />
+
+      {/* Lightbox Preview Foto Rumah Ukuran Penuh */}
+      <PhotoLightboxModal
+        isOpen={Boolean(zoomedPhoto)}
+        onClose={() => setZoomedPhoto(null)}
+        data={zoomedPhoto}
+        onEditPoint={
+          onSaveHousePoint && zoomedPhoto
+            ? () => {
+                const pkg = packages.find((p) => p.recipientName === zoomedPhoto.title);
+                if (pkg) onSaveHousePoint(pkg);
+              }
+            : undefined
+        }
       />
     </div>
   );

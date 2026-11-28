@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Clock,
 } from 'lucide-react';
-import type { DeliveryPackage } from '../types';
+import type { DeliveryPackage, SavedHousePoint } from '../types';
 import {
   getSiblingPackages,
   getSingleNavigationUrl,
@@ -20,6 +20,8 @@ import {
   calculateCombinedCodTotal,
   formatRupiah,
 } from '../utils/routeOptimizer';
+import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
+import { PhotoLightboxModal, type PhotoLightboxData } from './PhotoLightboxModal';
 
 interface CodDetailModalProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ interface CodDetailModalProps {
   targetPackage: DeliveryPackage | null;
   allPackages: DeliveryPackage[];
   whatsAppTemplate?: string;
+  savedHouses?: SavedHousePoint[];
   onQuickEditPhone?: (pkg: DeliveryPackage) => void;
 }
 
@@ -47,9 +50,11 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
   targetPackage,
   allPackages,
   whatsAppTemplate,
+  savedHouses,
   onQuickEditPhone,
 }) => {
   const [copiedResi, setCopiedResi] = useState<string | null>(null);
+  const [zoomedPhoto, setZoomedPhoto] = useState<PhotoLightboxData | null>(null);
 
   if (!isOpen || !targetPackage) return null;
 
@@ -62,6 +67,12 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
     (targetPackage.benchmark || '')
       .replace(/^DFOD\s*Ongkir\s*—?\s*/i, '')
       .trim() || targetPackage.areaOrStreet;
+
+  const matchingHouse = savedHouses ? findMatchingHouse(savedHouses, targetPackage) : undefined;
+  const isCustomerMatch = matchingHouse ? isSameCustomer(matchingHouse, targetPackage) : false;
+  const photoUrl =
+    targetPackage.proofPhotoUrl ||
+    (matchingHouse?.photoUrl && isCustomerMatch ? matchingHouse.photoUrl : undefined);
 
   const handleCopyResi = (resi: string) => {
     if (navigator.clipboard) {
@@ -137,14 +148,42 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
             </span>
           </div>
 
-          <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-3 text-xs text-zinc-700 space-y-1">
-            <div className="flex items-start gap-2">
-              <MapPin className="w-3.5 h-3.5 text-zinc-500 mt-0.5 shrink-0" />
-              <span className="leading-snug">{targetPackage.fullAddress}</span>
+          <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-3 text-xs text-zinc-700 flex items-start gap-3">
+            <div className="flex-1 space-y-1 min-w-0">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 text-zinc-500 mt-0.5 shrink-0" />
+                <span className="leading-snug">{targetPackage.fullAddress}</span>
+              </div>
+              {cleanBenchmark && (
+                <div className="text-[11px] text-zinc-500 pl-5">
+                  Patokan: <span className="font-semibold text-zinc-700">{cleanBenchmark}</span>
+                </div>
+              )}
             </div>
-            {cleanBenchmark && (
-              <div className="text-[11px] text-zinc-500 pl-5">
-                Patokan: <span className="font-semibold text-zinc-700">{cleanBenchmark}</span>
+
+            {photoUrl && (
+              <div
+                onClick={() =>
+                  setZoomedPhoto({
+                    url: photoUrl,
+                    title: cleanRecipientName,
+                    address: targetPackage.fullAddress,
+                    benchmark: cleanBenchmark,
+                    lat: targetPackage.lat,
+                    lng: targetPackage.lng,
+                  })
+                }
+                className="w-14 h-14 rounded-2xl border-2 border-amber-400 overflow-hidden cursor-pointer relative group shrink-0 shadow-xs active:scale-95 transition"
+                title="Ketuk untuk melihat foto rumah penerima"
+              >
+                <img
+                  src={photoUrl}
+                  alt="Foto Rumah"
+                  className="w-full h-full object-cover group-hover:scale-105 transition"
+                />
+                <div className="absolute bottom-0 inset-x-0 bg-black/75 text-white text-[8px] font-bold text-center py-0.5">
+                  🏡 Foto
+                </div>
               </div>
             )}
           </div>
@@ -277,6 +316,13 @@ export const CodDetailModal: React.FC<CodDetailModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Lightbox Preview Foto Rumah Ukuran Penuh */}
+      <PhotoLightboxModal
+        isOpen={Boolean(zoomedPhoto)}
+        onClose={() => setZoomedPhoto(null)}
+        data={zoomedPhoto}
+      />
     </div>
   );
 };

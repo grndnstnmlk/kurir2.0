@@ -41,6 +41,7 @@ import {
 import { findMatchingHouse, isSameCustomer } from '../utils/houseManager';
 import { RecipientPackagesModal } from './RecipientPackagesModal';
 import { CodDetailModal } from './CodDetailModal';
+import { PhotoLightboxModal, type PhotoLightboxData } from './PhotoLightboxModal';
 import { ACTIVE_DELIVERY_DATE, ACTIVE_DELIVERY_SHORT_LABEL } from '../utils/sampleData';
 
 interface IPhoneCardDeckViewProps {
@@ -115,6 +116,7 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
   const [isBatchAreaOpen, setIsBatchAreaOpen] = useState(false);
   const [isRecipientPackagesModalOpen, setIsRecipientPackagesModalOpen] = useState(false);
   const [isCodDetailModalOpen, setIsCodDetailModalOpen] = useState(false);
+  const [zoomedPhoto, setZoomedPhoto] = useState<PhotoLightboxData | null>(null);
   const [filterPendingOnly, setFilterPendingOnly] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -529,14 +531,8 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
     .reduce((sum, p) => sum + p.codAmount, 0);
 
   // Paket-paket milik penerima yang sama (untuk multi-paket 1 orang)
-  const recipientSiblingPkgs = React.useMemo(
-    () => (currentPkg ? getSiblingPackages(currentPkg, packages) : []),
-    [currentPkg, packages]
-  );
-  const recipientCombinedCod = React.useMemo(
-    () => calculateCombinedCodTotal(recipientSiblingPkgs),
-    [recipientSiblingPkgs]
-  );
+  const recipientSiblingPkgs = currentPkg ? getSiblingPackages(currentPkg, packages) : [];
+  const recipientCombinedCod = calculateCombinedCodTotal(recipientSiblingPkgs);
 
   return (
     <div
@@ -752,17 +748,27 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
               <div className="relative mb-2">
                 {currentPhotoUrl ? (
                   <div
-                    onClick={() => onSaveHousePoint && onSaveHousePoint(currentPkg)}
-                    className="w-24 h-24 rounded-3xl border-2 border-amber-400 flex flex-col items-center justify-center shadow-md relative overflow-hidden group cursor-pointer"
-                    title="Titik rumah tersimpan! Klik untuk lihat foto & patokan"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZoomedPhoto({
+                        url: currentPhotoUrl,
+                        title: currentPkg.recipientName,
+                        address: currentPkg.fullAddress,
+                        benchmark: currentPkg.benchmark || matchingHouse?.benchmark,
+                        lat: currentPkg.lat,
+                        lng: currentPkg.lng,
+                      });
+                    }}
+                    className="w-24 h-24 rounded-3xl border-2 border-amber-400 flex flex-col items-center justify-center shadow-md relative overflow-hidden group cursor-pointer active:scale-95 transition"
+                    title="Ketuk untuk melihat foto rumah ukuran penuh"
                   >
                     <img
                       src={currentPhotoUrl}
                       alt="Foto Rumah"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
-                    <div className="absolute bottom-1 bg-black/75 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <span>🏡 Rumah</span>
+                    <div className="absolute bottom-1 bg-black/75 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                      <span>🏡 Buka Foto</span>
                     </div>
                   </div>
                 ) : (
@@ -1102,8 +1108,17 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
             {currentPhotoUrl ? (
               <button
                 type="button"
-                onClick={() => onSaveHousePoint && onSaveHousePoint(currentPkg)}
-                className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 cursor-pointer transition"
+                onClick={() =>
+                  setZoomedPhoto({
+                    url: currentPhotoUrl,
+                    title: currentPkg.recipientName,
+                    address: currentPkg.fullAddress,
+                    benchmark: currentPkg.benchmark || matchingHouse?.benchmark,
+                    lat: currentPkg.lat,
+                    lng: currentPkg.lng,
+                  })
+                }
+                className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 cursor-pointer transition active:scale-95"
               >
                 <Home className="w-3.5 h-3.5" />
                 <span>🏡 Lihat Foto Rumah</span>
@@ -1650,7 +1665,20 @@ export const IPhoneCardDeckView: React.FC<IPhoneCardDeckViewProps> = ({
         targetPackage={currentPkg}
         allPackages={packages}
         whatsAppTemplate={whatsAppTemplate}
+        savedHouses={savedHouses}
         onQuickEditPhone={onQuickEditPhone}
+      />
+
+      {/* Lightbox Preview Foto Rumah Ukuran Penuh */}
+      <PhotoLightboxModal
+        isOpen={Boolean(zoomedPhoto)}
+        onClose={() => setZoomedPhoto(null)}
+        data={zoomedPhoto}
+        onEditPoint={
+          onSaveHousePoint && currentPkg
+            ? () => onSaveHousePoint(currentPkg)
+            : undefined
+        }
       />
 
     </div>
